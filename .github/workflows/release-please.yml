@@ -1,0 +1,24 @@
+# .github/workflows/release-please.yml
+
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        with:
+          # This is the most basic configuration
+          release-type: python
+          package-name: dynamixplore
+
+          # For more complex projects, you can define how to update
+          # version numbers in multiple files.
+          # Here's an example for your pyproject.toml
+          extra-files: |
+            pyproject.toml
