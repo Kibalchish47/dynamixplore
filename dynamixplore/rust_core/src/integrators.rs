@@ -174,31 +174,39 @@ fn implicit_integration_loop<S: ImplicitStepper>(
 // --- 4. Simple, Public-Facing PyFunctions ---
 
 #[pyfunction]
-pub fn solve_rk4(
-    py: Python, 
-    dynamics: PyObject, 
-    initial_state: PyReadonlyArray1<f64>, 
-    t_start: f64, 
-    t_end: f64, 
-    h: f64,
-) -> PyResult<PyObject>{ 
+pub fn solve_rk45_explicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
     // 1. Create the specific stepper construct.
-    let stepper = Rk4; 
-
+    let stepper = Rk45Explicit;
     // 2. Call the generic integration loop with it.
-    integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+    explicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
 }
 
 #[pyfunction]
-pub fn solve_rk45(
-    py: Python, 
-    dynamics: PyObject, 
-    initial_state: PyReadonlyArray1<f64>, 
-    t_start: f64, 
-    t_end: f64, 
-    h: f64,
-) -> PyResult<PyObject>{ 
-    let stepper = Rk45; 
+pub fn solve_rk4_explicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
+    let stepper = Rk4Explicit;
+    explicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+}
 
-    integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+#[pyfunction]
+pub fn solve_euler_explicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
+    let stepper = EulerExplicit;
+    explicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+}
+
+#[pyfunction]
+pub fn solve_rk45_implicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
+    let stepper = Rk45Implicit;
+    implicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+}
+
+#[pyfunction]
+pub fn solve_rk4_implicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
+    let stepper = Rk4Implicit;
+    implicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+}
+
+#[pyfunction]
+pub fn solve_euler_implicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
+    let stepper = EulerImplicit;
+    implicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
 }
