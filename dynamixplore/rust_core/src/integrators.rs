@@ -5,15 +5,6 @@ use numpy::{PyArray, PyReadonlyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
-#[derive(Clone)]
-// The State struct is a general-purpose container for the system's state
-// i.e. a convenient internal representation.
-// It's public so it can be used by main.rs or any other part of your library.
-pub struct State {
-    pub t: f64,
-    pub y: f64,
-}
-
 // --- 1. The Generic "Stepper" Trait ---
 // This defines the "contract" for any single-step integration algorithm. 
 trait Stepper { 
@@ -47,13 +38,13 @@ impl Stepper for Rk4 {
 
 // A struct to represent the Dormand-Prince 5(4) method. It holds no data.
 struct Rk45;
-//' Actual implementation of the RK45 method. 
+// Actual implementation of the RK45 method. 
 impl Stepper for Rk45 { 
     fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<DVector<f64>>
     where
         F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>>,
     {
-        // --- Dormand-Prince 5(4) coefficients (hardcoded) ---
+        // Dormand-Prince 5(4) coefficients (hardcoded)
         // c_i: time fractions
         const C2: f64 = 1.0 / 5.0;
         const C3: f64 = 3.0 / 10.0;
@@ -110,42 +101,33 @@ impl Stepper for Rk45 {
 
         let y_next = y + B1*k1 + B2*k2 + B3*k3 + B4*k4 + B5*k5 + B6*k6 + B7*k7;
         Ok(y_next)
+    }
 }
 
-// This function will implement the Dormand-Prince 5(4) method, often called RK45.
-// It takes the current state, the derivative function `f`, and the step size `h`.
-pub fn solve_rk45<F>(
-    py: Python,
-    dynamics: PyObject,
+// --- 3. The Generic Integration Loop ---
+// 
+//
+
+fn integration_loop<S: Stepper>(
+    py: Python, 
+    dynamics: PyObject, 
     initial_state: PyReadonlyArray1<f64>,
-    t_start: f64,
+    t_start: f64, 
     t_end: f64,
     h: f64,
+    stepper: &S,
 ) -> PyResult<PyObject> {
-    // --- Input Conversion (Python -> Rust) ---
-    // Get a view of the initial state numpy array to avoid copying.
-    let initial_state_view = initial_state.as_slice()?;
-    // Convert it to a nalgebra DVector.
-    let initial_y = DVector::from_column_slice(initial_state_view);
-
-    // --- Internal integration loop ---
-    let mut current_state = State {
-        t: t_start,
-        y: initial_y,
-    };
+    let initial_y = DVector::from_column_slice(initial_state.as_slice()?);
+    let mut current_t = t_start;
+    let mut current_y = initial_y;
 
     let num_steps = ((t_end - t_start) / h).ceil() as usize;
     let mut trajectory: Vec<DVector<f64>> = Vec::with_capacity(num_steps + 1);
     trajectory.push(current_state.y.clone());
 
-    for _ in 0..num_steps {
-        let y = &current_state.y;
-        let t = current_state.t;
-
-        // --- The Python Callback ---
-        // This is the core of the interaction. We define a helper closure
-        // to reduce boilerplate code for calling the Python dynamics function.
-        let call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
+    // This closure wraps the call to the Python dynamics function. 
+    // It's defined once and passed down into the stepper. 
+    let call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
             // Convert the Rust vector into a Python Numpy array for the callback
             let y_py = y_eval.as_slice().to_pyarray(py);
 
@@ -165,46 +147,20 @@ pub fn solve_rk45<F>(
             ))
         };
 
-        // Calculate stages by calling back into Python for each derivative evaluation
-        let k1 = h * call_dynamics(t, y)?;
-        let k2 = h * call_dynamics(t + C2 * h, &(y + A21 * &k1))?;
-        let k3 = h * call_dynamics(t + C3 * h, &(y + A31 * &k1 + A32 * &k2))?;
-        let k4 = h * call_dynamics(t + C4 * h, &(y + A41 * &k1 + A42 * &k2 + A43 * &k3))?;
-        let k5 = h * call_dynamics(
-            t + C5 * h,
-            &(y + A51 * &k1 + A52 * &k2 + A53 * &k3 + A54 * &k4),
-        )?;
-        let k6 = h * call_dynamics(
-            t + h,
-            &(y + A61 * &k1 + A62 * &k2 + A63 * &k3 + A64 * &k4 + A65 * &k5),
-        )?;
-        let k7 = h * call_dynamics(
-            t + h,
-            &(y + A71 * &k1 + A72 * &k2 + A73 * &k3 + A74 * &k4 + A75 * &k5 + A76 * &k6),
-        )?;
+    for _ in 0..num_steps { 
+        //
+        //
+        let y_next = stepper.step(current_t, &current_y, h, &mut call_dynamics);
 
-        let y_next = y + B1 * k1 + B2 * k2 + B3 * k3 + B4 * k4 + B5 * k5 + B6 * k6 + B7 * k7;
-
-        current_state = State {
-            t: t + h,
-            y: y_next,
-        };
-        trajectory.push(current_state.y.clone());
+        current_y = y_next; 
+        current_t += h; 
+        trajectory.push(current_y.clone());  
     }
 
     // --- Output Conversion (Rust -> Python) ---
-    // Get the dimensions of the final trajectory.
     let num_points = trajectory.len();
     let state_dim = trajectory[0].len();
-
-    // Flatten the Vec<DVector<f64>> into a single Vec<f64>.
-    let flat_trajectory: Vec<f64> = trajectory
-        .into_iter()
-        .flat_map(|v| v.into_iter().cloned())
-        .collect();
-
-    // Create a 2D NumPy array from the flattened data and return it.
+    let flat_trajectory: Vec<f64> = trajectory.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
     let result_array = PyArray::from_vec(py, flat_trajectory).reshape((num_points, state_dim))?;
-
     Ok(result_array.to_object(py))
 }
