@@ -7,8 +7,12 @@ mod integrators;
 // The name of the function (`dx_core`) determines the name of the module in Python.
 #[pymodule]
 fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
-    // We add our Rust function to the Python module.
-    // `wrap_pyfunction!` creates the necessary boilerplate to expose it.
-    m.add_function(wrap_pyfunction!(integrators::solve_rk45, m)?)?;
+    // We add our Rust functions to the Python module, with clear explicit/implicit names.
+    m.add_function(wrap_pyfunction!(integrators::solve_rk45_explicit, m)?)?;
+    m.add_function(wrap_pyfunction!(integrators::solve_rk45_implicit, m)?)?;
+    m.add_function(wrap_pyfunction!(integrators::solve_rk4_explicit, m)?)?;
+    m.add_function(wrap_pyfunction!(integrators::solve_rk4_implicit, m)?)?;
+    m.add_function(wrap_pyfunction!(integrators::solve_euler_explicit, m)?)?;
+    m.add_function(wrap_pyfunction!(integrators::solve_euler_implicit, m)?)?;
     Ok(())
 }
