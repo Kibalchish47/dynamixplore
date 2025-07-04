@@ -16,7 +16,6 @@ trait Stepper {
 }
 
 // --- 2. Structs and Implementations for Each Solver ---
-
 // Placeholder for the classic RK4 method.
 struct Rk4;
 impl Stepper for Rk4 {
@@ -45,6 +44,7 @@ impl Stepper for Rk45 {
         F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>>,
     {
         // Dormand-Prince 5(4) coefficients (hardcoded)
+        // Note: Coefficients are defined inside the step where they are used.
         // c_i: time fractions
         const C2: f64 = 1.0 / 5.0;
         const C3: f64 = 3.0 / 10.0;
@@ -105,8 +105,8 @@ impl Stepper for Rk45 {
 }
 
 // --- 3. The Generic Integration Loop ---
-// 
-//
+// This function contains all the shared boilerplate code. It is NOT a pyfunction.
+// It is generic over any type `S` that implements our `Stepper` trait.
 
 fn integration_loop<S: Stepper>(
     py: Python, 
@@ -148,8 +148,8 @@ fn integration_loop<S: Stepper>(
         };
 
     for _ in 0..num_steps { 
-        //
-        //
+        // The magic happens here: we call the specific `step` method
+        // of whatever `stepper` was passed in.
         let y_next = stepper.step(current_t, &current_y, h, &mut call_dynamics);
 
         current_y = y_next; 
@@ -163,4 +163,36 @@ fn integration_loop<S: Stepper>(
     let flat_trajectory: Vec<f64> = trajectory.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
     let result_array = PyArray::from_vec(py, flat_trajectory).reshape((num_points, state_dim))?;
     Ok(result_array.to_object(py))
+}
+
+// --- 4. Simple, Public-Facing PyFunctions ---
+
+#[pyfunction]
+pub fn solve_rk4(
+    py: Python, 
+    dynamics: PyObject, 
+    initial_state: PyReadonlyArray1<f64>, 
+    t_start: f64, 
+    t_end: f64, 
+    h: f64,
+) -> PyResult<PyObject>{ 
+    // 1. Create the specific stepper construct.
+    let stepper = Rk4; 
+
+    // 2. Call the generic integration loop with it.
+    integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
+}
+
+#[pyfunction]
+pub fn solve_rk45(
+    py: Python, 
+    dynamics: PyObject, 
+    initial_state: PyReadonlyArray1<f64>, 
+    t_start: f64, 
+    t_end: f64, 
+    h: f64,
+) -> PyResult<PyObject>{ 
+    let stepper = Rk45; 
+
+    integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
 }
