@@ -7,7 +7,6 @@ on:
     branches:
       - main
 
-# This is the most important change: Granting write permissions
 permissions:
   contents: write
   pull-requests: write
@@ -16,10 +15,11 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      # This uses the new, correct path for the action
       - uses: googleapis/release-please-action@v4
         with:
-          # We now point to a configuration file instead of putting
-          # all the options here directly.
+          # This is the key change:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          
+          # The rest remains the same
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
