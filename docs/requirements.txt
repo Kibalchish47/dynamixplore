@@ -1,0 +1,17 @@
+# This file lists the Python packages needed to build the documentation.
+
+# The core documentation generator
+sphinx
+
+# A modern, clean theme for Sphinx websites
+pydata-sphinx-theme
+
+# For creating a gallery of examples from Python scripts
+sphinx-gallery
+
+# For understanding NumPy/Google style docstrings
+sphinx.ext.napoleon
+
+# Your library's own dependencies, so examples can run
+numpy
+plotly
