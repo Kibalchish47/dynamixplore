@@ -7,18 +7,19 @@ on:
     branches:
       - main
 
+# This is the most important change: Granting write permissions
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v4
+      # This uses the new, correct path for the action
+      - uses: googleapis/release-please-action@v4
         with:
-          # This is the most basic configuration
-          release-type: python
-          package-name: dynamixplore
-
-          # For more complex projects, you can define how to update
-          # version numbers in multiple files.
-          # Here's an example for your pyproject.toml
-          extra-files: |
-            pyproject.toml
+          # We now point to a configuration file instead of putting
+          # all the options here directly.
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
