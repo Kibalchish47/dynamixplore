@@ -19,7 +19,7 @@ jobs:
         with:
           # This is the key change:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          
+
           # The rest remains the same
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
