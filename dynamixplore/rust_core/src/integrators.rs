@@ -64,7 +64,7 @@ impl ExplicitStepper for Rk45Explicit {
     }
 }
 
-// Placeholder for the classic RK4 method.
+// Placeholder for the classic explicit RK4 method.
 struct Rk4Explicit;
 impl ExplicitStepper for Rk4Explicit {
     fn step<F>(&self, _t: f64, _y: &DVector<f64>, _h: f64, _f: &mut F) -> PyResult<DVector<f64>>
@@ -73,6 +73,7 @@ impl ExplicitStepper for Rk4Explicit {
     }
 }
 
+// Placeholder for the classic explicit Euler's method.
 struct EulerExplicit;
 impl ExplicitStepper for EulerExplicit {
     fn step<F>(&self, _t: f64, _y: &DVector<f64>, _h: f64, _f: &mut F) -> PyResult<DVector<f64>>
@@ -83,6 +84,7 @@ impl ExplicitStepper for EulerExplicit {
 
 // -- Implicit Solvers (Placeholders) --
 
+// Placeholder for the implicit Runge–Kutta–Fehlberg (RK45) method.
 struct Rk45Implicit;
 impl ImplicitStepper for Rk45Implicit {
     fn step<F>(&self, _t: f64, _y: &DVector<f64>, _h: f64, _f: &mut F) -> PyResult<DVector<f64>>
@@ -91,6 +93,7 @@ impl ImplicitStepper for Rk45Implicit {
     }
 }
 
+// Placeholder for the classic implicit RK4 method.
 struct Rk4Implicit;
 impl ImplicitStepper for Rk4Implicit {
     fn step<F>(&self, _t: f64, _y: &DVector<f64>, _h: f64, _f: &mut F) -> PyResult<DVector<f64>>
@@ -99,6 +102,7 @@ impl ImplicitStepper for Rk4Implicit {
     }
 }
 
+// Placeholder for the classic implicit Euler's method.
 struct EulerImplicit;
 impl ImplicitStepper for EulerImplicit {
     fn step<F>(&self, _t: f64, _y: &DVector<f64>, _h: f64, _f: &mut F) -> PyResult<DVector<f64>>
@@ -108,7 +112,7 @@ impl ImplicitStepper for EulerImplicit {
 }
 
 // --- 3. The Generic Integration Loops ---
-// Those functions contains all the shared boilerplate code. They are NOT pyfunctions.
+// Those functions contain all the shared boilerplate code. They are NOT pyfunctions.
 // They are generic over any type `S` that implements our `ExplicitStepper` and 'ImplicitStepper' traits.
 
 fn explicit_integration_loop<S: ExplicitStepper>(
