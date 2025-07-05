@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.2.0...dynamixplore-v0.3.0) (2025-07-05)
+
+
+### Features
+
+* (Tentatively) Reworked the integrators logic ([8310224](https://github.com/Kibalchish47/dynamixplore/commit/8310224187124c59a4d27d92b5361ee4605af956))
+* Defined Python module wrapper in lib.rs ([4cc11a0](https://github.com/Kibalchish47/dynamixplore/commit/4cc11a086b0313242f65b3cac2a5f083d1744a6f))
+* Implementation of the RK45 Dormand-Prince 5(4) algorithmic integrator ([588f090](https://github.com/Kibalchish47/dynamixplore/commit/588f090d594d5a01cd2aea44125514bedc2e056e))
+* Initial sketch for PyO3 integration in the solve_rk45() integrator ([71cc7d3](https://github.com/Kibalchish47/dynamixplore/commit/71cc7d32648ed0b88f32c49c0dc0d672351514f1))
+* **integrators:** Create simple public functions ([a0c72e6](https://github.com/Kibalchish47/dynamixplore/commit/a0c72e6114e1d3da603c3dc3777c5bb2a8ae00e9))
+* **integrators:** Expanded integrator architecture ([cecc7aa](https://github.com/Kibalchish47/dynamixplore/commit/cecc7aa313c11330be007493999175e5a660ef88))
+* **integrators:** Expanded public API ([07d3771](https://github.com/Kibalchish47/dynamixplore/commit/07d377155099658cec8597ae61846ac86ef29f99))
+* **integrators:** Implemented integration loop ([3130cfa](https://github.com/Kibalchish47/dynamixplore/commit/3130cfaa0dc8551008fd19d5b45ec5d229f802a0))
+* **integrators:** Sketch for RK4 and RK45 integrators implementation ([5c741ac](https://github.com/Kibalchish47/dynamixplore/commit/5c741ac5b9c98f23f226bad0a498a58dde632bd4))
+
+
+### Documentation
+
+* Basic README outline ([a690725](https://github.com/Kibalchish47/dynamixplore/commit/a69072539401819c0cc568179c84f0bf093eea5a))
+
 ## [0.2.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.1.0...dynamixplore-v0.2.0) (2025-07-05)
 
 
