@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.3.0...dynamixplore-v0.3.1) (2025-07-06)
+
+
+### Documentation
+
+* wrote `DynamiXplore`'s summary ([eb5779b](https://github.com/Kibalchish47/dynamixplore/commit/eb5779bd915216ea404a23692f95bdc2ac3ac9b4))
+
 ## [0.2.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.1.0...dynamixplore-v0.2.0) (2025-07-05)
 
 
