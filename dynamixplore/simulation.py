@@ -1,15 +1,39 @@
+# To make our code compatible with older versions of Python, we import annotations.
+# This allows us to use type hints like 'Analysis' before the class is fully defined,
+# which is crucial for the fluent interface in our `run` method.
 from __future__ import annotations
 
+# We import the necessary tools from Python's 'typing' module.
+# This doesn't change how the code runs, but it provides "hints" to developers
+# and tools like IDEs about what kind of data a function expects and returns.
+# - Callable: Represents something that can be called, like a function.
+# - List, Tuple: Represents Python's list and tuple data structures.
+# - Union: Allows a variable to be one of several types (e.g., a list OR a NumPy array).
+from typing import Callable, List, Tuple, Union
+
+# NumPy is the cornerstone of scientific computing in Python. We import it
+# and give it the standard alias 'np'. We will use it to handle all numerical
+# arrays, as it's far more efficient than standard Python lists for math.
 import numpy as np
-from typing import Callable, List, Tuple
 
 # --- The Bridge and the Result ---
+# This is where we connect our Python layer to the other parts of the project.
+
+# We import the 'rust_core' module. This is the compiled Rust extension module
+# that `maturin` creates. It now contains our expanded set of solver functions
+# like `solve_rk45_adaptive`, `solve_rk4_explicit`, etc.
 from . import rust_core
 
+# We import the 'Analysis' class from our own 'analysis.py' file.
+# The `run` method will wrap its results in this class to create a smooth,
+# "fluent" user experience, allowing for method chaining like `sim.run().plot()`.
 from .analysis import Analysis
 
+# We define our main user-facing class. The name 'Simulation' clearly
+# communicates its purpose.
 class Simulation:
     """
+    Configures and executes a numerical simulation of a dynamical system.
     """
 
     # The __init__ method is the constructor for the class. It's called when a
@@ -59,9 +83,22 @@ class Simulation:
     # for the user to call: `sim.run()`.
     def run(self, solver: str = 'RK45') -> Analysis:
         """
+        Runs the simulation using the configured parameters.
+
+        This method acts as the "Orchestrator". It selects the correct backend
+        solver, packages the arguments, and makes the call to the Rust core.
+        It then wraps the raw numerical result into a user-friendly `Analysis`
+        object.
+
+        Args:
+
+        Returns:
         """
 
         # --- Backend Selection (Dispatcher) ---
+        # Instead of a long `if/elif/else` chain, we use a dictionary to map the
+        # user-friendly solver string to the actual Rust function. This is a
+        # cleaner, more scalable design.
         solver_map = {
             'rk45_adaptive': rust_core.solve_rk45_adaptive,
             'rk4_explicit': rust_core.solve_rk4_explicit,
@@ -72,6 +109,8 @@ class Simulation:
 
         # We check if the user's requested solver is available.
         if solver not in solver_map:
+            # If not, we raise an error with a helpful message listing all
+            # available options, which we get directly from the dictionary keys.
             supported_solvers = list(solver_map.keys())
             raise ValueError(
                 f"Solver '{solver}' is not supported."
@@ -82,7 +121,8 @@ class Simulation:
         solver_func = solver_map[solver]
 
         # --- Argument Preparation and The Bridge Call to Rust ---
-        #
+        # We pack the arguments common to all solvers into a tuple.
+        # This avoids repetition.
         common_args = (
             self.dynamics_func.
             self.initial_state,
@@ -91,7 +131,8 @@ class Simulation:
             self.dt
         )
 
-        #
+        # We check if the selected solver is the adaptive one, as it requires
+        # special, additional arguments.
         if solver == 'rk45_adaptive':
             #
             abstol = self.solver_options.get('abstol', 1e-6)
@@ -104,4 +145,7 @@ class Simulation:
             trajectory, times = solver_func(*common_args)
 
         # --- Wrapping the Result ---
+        # The Rust core has finished and returned the results. We now instantiate
+        # our `Analysis` class. Because we use keyword arguments (`trajectory=...`),
+        # the order doesn't matter here, making the code robust and readable.
         return Analysis(trajectory=trajectory, times=times)
