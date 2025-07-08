@@ -60,4 +60,48 @@ class Simulation:
     def run(self, solver: str = 'RK45') -> Analysis:
         """
         """
-        pass
+
+        # --- Backend Selection (Dispatcher) ---
+        solver_map = {
+            'rk45_adaptive': rust_core.solve_rk45_adaptive,
+            'rk4_explicit': rust_core.solve_rk4_explicit,
+            'euler_explicit': rust_core.solve_euler_explicit,
+            'rk4_implicit': rust_core.solve_rk4_implicit,
+            'euler_implicit': rust_core.solve_euler_implicit
+        }
+
+        # We check if the user's requested solver is available.
+        if solver not in solver_map:
+            supported_solvers = list(solver_map.keys())
+            raise ValueError(
+                f"Solver '{solver}' is not supported."
+                f"Please use one of: {supported_solvers}"
+            )
+
+        # We retrieve the correct Rust solver function from our map.
+        solver_func = solver_map[solver]
+
+        # --- Argument Preparation and The Bridge Call to Rust ---
+        #
+        common_args = (
+            self.dynamics_func.
+            self.initial_state,
+            self.t_span[0],
+            self.t_span[1],
+            self.dt
+        )
+
+        #
+        if solver == 'rk45_adaptive':
+            #
+            abstol = self.solver_options.get('abstol', 1e-6)
+            reltol = self.solver_options.get('reltol', 1e-6)
+
+            #
+            trajectory, times = solver_func(*common_args, abstol=abstol, reltol=reltol)
+        else:
+            #
+            trajectory, times = solver_func(*common_args)
+
+        # --- Wrapping the Result ---
+        return Analysis(trajectory=trajectory, times=times)
