@@ -34,6 +34,13 @@ from .analysis import Analysis
 class Simulation:
     """
     Configures and executes a numerical simulation of a dynamical system.
+
+    This class acts as a high-level "Conductor" for the powerful Rust core engine.
+    Its primary responsibilities are to:
+    1. Provide a clean, intuitive, and user-friendly API.
+    2. Rigorously validate all user inputs to prevent errors.
+    3. Orchestrate the call to the correct high-performance Rust function.
+    4. Return the results in a convenient, analysis-ready format.
     """
 
     # The __init__ method is the constructor for the class. It's called when a
@@ -46,6 +53,26 @@ class Simulation:
                 dt: float,
                 solver_options: dict = None):
         """
+        Initializes and validates the simulation parameters.
+
+        This is the "Gatekeeper" of the simulation. It ensures that all inputs
+        are valid and in a standard format before any computation begins.
+
+        Args:
+            dynamics_func (Callable): The function defining the system's dynamics,
+                f(t, y). It must accept the current time `t` (a float) and the
+                current state `y` (a 1D NumPy array) as input. It must return
+                the derivatives (dy/dt) as a list of floats or a 1D NumPy array.
+            initial_state (Union[List[float], np.ndarray]): The starting state
+                vector of the system. Can be provided as a simple Python list or
+                a NumPy array.
+            t_span (Tuple[float, float]): A tuple `(t_start, t_end)` specifying
+                the time interval for the simulation.
+            dt (float): The time step for fixed-step solvers. For adaptive
+                solvers, this is used as the *initial* time step.
+            solver_options (dict, optional): A dictionary for advanced solver
+                parameters, like 'abstol' and 'reltol' for adaptive solvers.
+                Defaults to None.
         """
         # --- Input Validation and Standardization ---
         # 1. Validate `dynamics_func`
@@ -91,10 +118,15 @@ class Simulation:
         object.
 
         Args:
+            solver (str): The name of the ODE solver to use.
+                          Supported: 'rk45_adaptive', 'rk4_explicit', 'euler_explicit',
+                          'rk4_implicit', 'euler_implicit'.
+                          Defaults to 'rk45_adaptive'.
 
         Returns:
+            Analysis: An Analysis object containing the resulting trajectory and
+                      time points, ready for further processing and visualization.
         """
-
         # --- Backend Selection (Dispatcher) ---
         # Instead of a long `if/elif/else` chain, we use a dictionary to map the
         # user-friendly solver string to the actual Rust function. This is a
@@ -124,7 +156,7 @@ class Simulation:
         # We pack the arguments common to all solvers into a tuple.
         # This avoids repetition.
         common_args = (
-            self.dynamics_func.
+            self.dynamics_func,
             self.initial_state,
             self.t_span[0],
             self.t_span[1],
@@ -134,14 +166,22 @@ class Simulation:
         # We check if the selected solver is the adaptive one, as it requires
         # special, additional arguments.
         if solver == 'rk45_adaptive':
-            #
+            # We use the `.get()` method on the `solver_options` dictionary.
+            # This is safer than direct access (`self.solver_options['abstol']`),
+            # because it lets us provide a default value if the key is missing.
+            # These defaults match the defaults in the Rust function signature.
             abstol = self.solver_options.get('abstol', 1e-6)
             reltol = self.solver_options.get('reltol', 1e-6)
 
-            #
+            # We call the adaptive solver, passing the common arguments followed
+            # by the specific tolerance keyword arguments.
+            # Note: Since the Rust function returns (trajectory, times),
+            # The order of `trajectory` and `times` here should match.
             trajectory, times = solver_func(*common_args, abstol=abstol, reltol=reltol)
         else:
-            #
+            # For all other solvers (fixed-step explicit and the implicit placeholders),
+            # we call the function using only the common arguments. The `*` operator
+            # "unpacks" the `common_args` tuple into individual arguments for the function.
             trajectory, times = solver_func(*common_args)
 
         # --- Wrapping the Result ---
