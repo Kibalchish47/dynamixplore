@@ -42,10 +42,12 @@ impl AdaptiveStepper for Rk45Adaptive {
         const A64: f64 = 49.0/176.0; const A65: f64 = -5103.0/18656.0; const A71: f64 = 35.0/384.0;
         const A72: f64 = 0.0; const A73: f64 = 500.0/1113.0; const A74: f64 = 125.0/192.0;
         const A75: f64 = -2187.0/6784.0; const A76: f64 = 11.0/84.0;
-        // b_i for 5th order result (the final result)
+
+        // B_i for 5th order result (the final result)
         const B1: f64 = 35.0/384.0; const B2: f64 = 0.0; const B3: f64 = 500.0/1113.0;
         const B4: f64 = 125.0/192.0; const B5: f64 = -2187.0/6784.0; const B6: f64 = 11.0/84.0; const B7: f64 = 0.0;
-        // b_star_i for 4th order result (for error estimation)
+
+        // B_STAR_i for 4th order result (for error estimation)
         const B_STAR_1: f64 = 5179.0/57600.0; const B_STAR_2: f64 = 0.0; const B_STAR_3: f64 = 7571.0/16695.0;
         const B_STAR_4: f64 = 393.0/640.0; const B_STAR_5: f64 = -92097.0/339200.0; const B_STAR_6: f64 = 187.0/2100.0;
         const B_STAR_7: f64 = 1.0/40.0;
@@ -66,29 +68,44 @@ impl AdaptiveStepper for Rk45Adaptive {
     }
 }
 
-// --- Other solver placeholders (unchanged) ---
 struct Rk4Explicit;
-impl ExplicitStepper for Rk4Explicit { fn step<F>(&self, _: f64, _: &DVector<f64>, _: f64, _: &mut F) -> PyResult<DVector<f64>> 
-    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> { 
-        Err(PyNotImplementedError::new_err("...")) } 
+impl ExplicitStepper for Rk4Explicit {
+    fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<DVector<f64>>
+    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
+        let k1 = f(t, y)?;
+        let k2 = f(t + 0.5 * h, &(y + 0.5 * h * &k1))?;
+        let k3 = f(t + 0.5 * h, &(y + 0.5 * h * &k2))?;
+        let k4 = f(t + h, &(y + h * &k3))?;
+
+        let y_next = y + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+        Ok(y_next)
+    }
 }
 
 struct EulerExplicit;
-impl ExplicitStepper for EulerExplicit { fn step<F>(&self, _: f64, _: &DVector<f64>, _: f64, _: &mut F) -> PyResult<DVector<f64>> 
-    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> { 
-        Err(PyNotImplementedError::new_err("...")) } 
+impl ExplicitStepper for EulerExplicit {
+    fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<DVector<f64>>
+    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
+        let k1 = f(t, y)?;
+        let y_next = y + h * k1;
+        Ok(y_next)
+    }
 }
 
 struct Rk4Implicit;
-impl ImplicitStepper for Rk4Implicit { fn step<F>(&self, _: f64, _: &DVector<f64>, _: f64, _: &mut F) -> PyResult<DVector<f64>> 
-    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> { 
-        Err(PyNotImplementedError::new_err("...")) } 
+impl ImplicitStepper for Rk4Implicit {
+    fn step<F>(&self, _: f64, _: &DVector<f64>, _: f64, _: &mut F) -> PyResult<DVector<f64>>
+    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
+        Err(PyNotImplementedError::new_err("Implicit RK4 requires a non-linear solver for the coupled stage equations, which is not yet implemented."))
+    }
 }
 
 struct EulerImplicit;
-impl ImplicitStepper for EulerImplicit { fn step<F>(&self, _: f64, _: &DVector<f64>, _: f64, _: &mut F) -> PyResult<DVector<f64>> 
-    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> { 
-        Err(PyNotImplementedError::new_err("...")) } 
+impl ImplicitStepper for EulerImplicit {
+    fn step<F>(&self, _: f64, _: &DVector<f64>, _: f64, _: &mut F) -> PyResult<DVector<f64>>
+    where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
+        Err(PyNotImplementedError::new_err("Implicit Euler requires a root-finding algorithm (e.g., Newton's method) to solve for the next state, which is not yet implemented."))
+    }
 }
 
 // --- 3. Generic Integration Loops ---
@@ -114,7 +131,6 @@ fn adaptive_integration_loop<S: AdaptiveStepper>(
         Ok(DVector::from_column_slice(py_array.readonly().as_slice()?))
     };
     
-    // Safety factors for step size control
     const SAFETY: f64 = 0.9;
     const MIN_FACTOR: f64 = 0.2;
     const MAX_FACTOR: f64 = 10.0;
@@ -126,7 +142,6 @@ fn adaptive_integration_loop<S: AdaptiveStepper>(
 
         let (y_next, error_vec) = stepper.step(current_t, &current_y, current_h, &mut call_dynamics)?;
         
-        // Calculate error scalar
         let error_norm = error_vec.norm();
         let y_norm = current_y.norm().max(y_next.norm());
         let tolerance = abstol + reltol * y_norm;
@@ -138,7 +153,6 @@ fn adaptive_integration_loop<S: AdaptiveStepper>(
             times.push(current_t);
             trajectory.push(current_y.clone());
         }
-        
         // Calculate optimal step size for the next step, whether this one was accepted or not
         let mut factor = SAFETY * (1.0 / error).powf(0.2);
         factor = factor.max(MIN_FACTOR).min(MAX_FACTOR);
@@ -156,9 +170,47 @@ fn adaptive_integration_loop<S: AdaptiveStepper>(
 }
 
 // The old fixed-step loop remains for the other explicit solvers
-fn explicit_integration_loop<S: ExplicitStepper>(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64, stepper: &S) -> PyResult<PyObject> { /* ... unchanged ... */ Ok(PyTuple::new(py, &[]).to_object(py)) }
-fn implicit_integration_loop<S: ImplicitStepper>(_py: Python, _dynamics: PyObject, _initial_state: PyReadonlyArray1<f64>, _t_start: f64, _t_end: f64, _h: f64, _stepper: &S) -> PyResult<PyObject> { Err(PyNotImplementedError::new_err("...")) }
+fn explicit_integration_loop<S: ExplicitStepper>(
+    py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>,
+    t_start: f64, t_end: f64, h: f64, stepper: &S
+) -> PyResult<PyObject> {
+    let initial_y = DVector::from_column_slice(initial_state.as_slice()?);
+    let mut current_t = t_start;
+    let mut current_y = initial_y;
 
+    let num_steps = ((t_end - t_start) / h).ceil() as usize;
+    let mut trajectory: Vec<DVector<f64>> = Vec::with_capacity(num_steps + 1);
+    trajectory.push(current_y.clone());
+    
+    let mut call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
+        let y_py = y_eval.as_slice().to_pyarray(py);
+        let args = PyTuple::new(py, &[t_eval.into_py(py), y_py.into_py(py)]);
+        let result = dynamics.call(py, args, None)?;
+        let py_array: &PyArray<f64, _> = result.extract(py)?;
+        Ok(DVector::from_column_slice(py_array.readonly().as_slice()?))
+    };
+
+    for _ in 0..num_steps {
+        let y_next = stepper.step(current_t, &current_y, h, &mut call_dynamics)?;
+        
+        current_y = y_next;
+        current_t += h;
+        trajectory.push(current_y.clone());
+    }
+
+    let num_points = trajectory.len();
+    let state_dim = if num_points > 0 { trajectory[0].len() } else { 0 };
+    let flat_trajectory: Vec<f64> = trajectory.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
+    let result_array = PyArray::from_vec(py, flat_trajectory).reshape((num_points, state_dim))?;
+    Ok(result_array.to_object(py))
+}
+
+fn implicit_integration_loop<S: ImplicitStepper>(
+    _py: Python, _dynamics: PyObject, _initial_state: PyReadonlyArray1<f64>,
+    _t_start: f64, _t_end: f64, _h: f64, _stepper: &S
+) -> PyResult<PyObject> {
+    Err(PyNotImplementedError::new_err("The implicit integration loop requires a non-linear solver and is not yet implemented."))
+}
 
 // --- 4. Simple, Public-Facing PyFunctions ---
 
@@ -169,7 +221,6 @@ pub fn solve_rk45_adaptive(py: Python, dynamics: PyObject, initial_state: PyRead
     adaptive_integration_loop(py, dynamics, initial_state, t_start, t_end, h, abstol, reltol, &stepper)
 }
 
-// Other pyfunctions remain unchanged
 #[pyfunction]
 pub fn solve_rk4_explicit(py: Python, dynamics: PyObject, initial_state: PyReadonlyArray1<f64>, t_start: f64, t_end: f64, h: f64) -> PyResult<PyObject> {
     let stepper = Rk4Explicit;
