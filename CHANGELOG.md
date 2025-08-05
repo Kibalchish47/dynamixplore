@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.3.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.2.0...dynamixplore-v0.3.0) (2025-08-05)
+
+
+### Features
+
+* (tentatively) reworked the integrators logic ([94c9014](https://github.com/Kibalchish47/dynamixplore/commit/94c90141a8a13eee4df2112e38be53651dc1b32d))
+* created simple public functions ([f85e46d](https://github.com/Kibalchish47/dynamixplore/commit/f85e46d68d97de576e54c895afb4bdb10d6e975f))
+* defined Python module wrapper in `/lib.rs` ([536dbf7](https://github.com/Kibalchish47/dynamixplore/commit/536dbf76a29d81a9445cc99f817c29839fdf5252))
+* defined the package's public-facing API ([7fb9592](https://github.com/Kibalchish47/dynamixplore/commit/7fb95923d34046a8d286ab5aa606afb1ec9c8ffe))
+* expanded the integrator architecture ([7dc45b7](https://github.com/Kibalchish47/dynamixplore/commit/7dc45b788df2be3274e9b098088948d649ac5346))
+* expanded the public API ([9efbf75](https://github.com/Kibalchish47/dynamixplore/commit/9efbf75c2dcd088b709d872621fb3ae2ca523456))
+* implemented `entropy.rs` module ([de330bc](https://github.com/Kibalchish47/dynamixplore/commit/de330bc21441a98e6b9959fdb434291ed4ed2710))
+* implemented `stats.rs` module ([ce52697](https://github.com/Kibalchish47/dynamixplore/commit/ce526973f26c029331d4757c2607aa8ba093117c))
+* implemented high-level plotting in `visualize.py` ([2aacaa4](https://github.com/Kibalchish47/dynamixplore/commit/2aacaa4759830ed6c5aff239c4d92becbae5b815))
+* implemented RK4 and euler's methods properly ([c0590f8](https://github.com/Kibalchish47/dynamixplore/commit/c0590f8335006c8509a899190fe0dca90bdb2e83))
+* implemented stateful `Analysis` class for post-simulation processing ([e8a3e64](https://github.com/Kibalchish47/dynamixplore/commit/e8a3e641456e18a62891dc82b66905237b3d08ea))
+* implemented the  method belonging to the  class ([fa1a5e2](https://github.com/Kibalchish47/dynamixplore/commit/fa1a5e2867caa5a373987cdce95964045a53da36))
+* implemented the integration loop ([72585b0](https://github.com/Kibalchish47/dynamixplore/commit/72585b04ea01ae5c2892103815d58e6d9ea6c176))
+* implemented the RK45 Dormand-Prince 5(4) algorithmic integrator ([7625547](https://github.com/Kibalchish47/dynamixplore/commit/7625547a071c3355dd024f73b342c9110c7a3003))
+* initial sketch for PyO3 integration in the solve_rk45() integrator ([0eb12af](https://github.com/Kibalchish47/dynamixplore/commit/0eb12af1242003c67d7d4d7990d9ebacd6949a2a))
+* modified `lib.rs` to account for new functions ([fa1a2a9](https://github.com/Kibalchish47/dynamixplore/commit/fa1a2a9a868d7879ac8df844e46ff57f60cda67e))
+* partially implemented  class (constructor) ([6cea758](https://github.com/Kibalchish47/dynamixplore/commit/6cea758d5f7e4d4c836ea8906dd7505debdcc3d5))
+* re-implemented the solver architecture ([ae880bf](https://github.com/Kibalchish47/dynamixplore/commit/ae880bf8cb470b4de0d2db8babebe6c5c5904cf5))
+* sketched out the RK4 and RK45 integrators implementation ([c04b1c3](https://github.com/Kibalchish47/dynamixplore/commit/c04b1c33ecac59c9f70672f16c301fb35ca73f17))
+
+
+### Documentation
+
+* basic code documentation for ([c30e477](https://github.com/Kibalchish47/dynamixplore/commit/c30e4777f255235a653879575e9f3fa68d7bd24f))
+* basic README outline ([ac4e938](https://github.com/Kibalchish47/dynamixplore/commit/ac4e938bb1819c2877470c522ccdfa6cdb9074dd))
+* finalized  code annotation and documentation (docstrings) ([1b5b2d3](https://github.com/Kibalchish47/dynamixplore/commit/1b5b2d3b90f7c80c7a5d5eb3f224ba153242f1fc))
+* typo + removed unnecessary file ([7a90956](https://github.com/Kibalchish47/dynamixplore/commit/7a90956ac8014bb1f6ecb8126987a6c94a89dc00))
+* wrote `DynamiXplore`'s summary ([eb5779b](https://github.com/Kibalchish47/dynamixplore/commit/eb5779bd915216ea404a23692f95bdc2ac3ac9b4))
+
 ## [0.2.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.1.0...dynamixplore-v0.2.0) (2025-07-05)
 
 
