@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.3.0...dynamixplore-v0.4.0) (2025-08-12)
+
+
+### Features
+
+* average results, convert, and return ([7802a0a](https://github.com/Kibalchish47/dynamixplore/commit/7802a0a253be4a9edc97d9e3f69f11ffff2d7fb7))
+* implemented approximate entropy ([0d61281](https://github.com/Kibalchish47/dynamixplore/commit/0d612816ec6fc0762f10ff1dffbb0ccdcf3dc60a))
+* implemented main loop ([bbaa96c](https://github.com/Kibalchish47/dynamixplore/commit/bbaa96c53fd46715825d36eb1a0bcd3fef721171))
+* run transient phase + initialization for main loop ([29788bc](https://github.com/Kibalchish47/dynamixplore/commit/29788bc8bf91222bbcd685c7d14206b2418a5836))
+* updated `lib.rs` with new functions ([01d21df](https://github.com/Kibalchish47/dynamixplore/commit/01d21df9e93975c19389716cfabe19b8c6bedcb9))
+
+
+### Documentation
+
+* `entropy.rs` code annotation ([d942e3e](https://github.com/Kibalchish47/dynamixplore/commit/d942e3e6dafe9406a743b50dcc27aa0a5a57d0fd))
+* `lyapunov.rs` code annotation ([3339aba](https://github.com/Kibalchish47/dynamixplore/commit/3339abaf075c54fb482aa8587c8c8734ae0cfc9b))
+* README.md improvement ([99f9e51](https://github.com/Kibalchish47/dynamixplore/commit/99f9e5190c22139d421950c5e81d8f96ae75b1a3))
+
 ## [0.3.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.2.0...dynamixplore-v0.3.0) (2025-08-05)
 
 
