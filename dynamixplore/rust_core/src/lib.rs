@@ -13,7 +13,6 @@ mod stats;
 #[pymodule]
 fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
     // --- Add Integrator Functions ---
-    // Note the change from `solve_rk45_explicit` to `solve_rk45_adaptive`.
     m.add_function(wrap_pyfunction!(integrators::solve_rk45_adaptive, m)?)?;
     m.add_function(wrap_pyfunction!(integrators::solve_rk4_explicit, m)?)?;
     m.add_function(wrap_pyfunction!(integrators::solve_rk4_implicit, m)?)?;
@@ -22,7 +21,11 @@ fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
 
     // --- Add Entropy and Stats Functions ---
     m.add_function(wrap_pyfunction!(entropy::compute_permutation_entropy, m)?)?;
+    m.add_function(wrap_pyfunction!(entropy::compute_approximate_entropy, m)?)?;
     m.add_function(wrap_pyfunction!(stats::compute_invariant_measure, m)?)?;
+
+    // --- Add Lyapunov Spectrum Function ---
+    m.add_function(wrap_pyfunction!(lyapunov::compute_lyapunov_spectrum, m)?)?;
     
     Ok(())
 }

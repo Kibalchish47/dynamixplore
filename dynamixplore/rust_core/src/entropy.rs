@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 // --- Helper function for Approximate Entropy ---
 
-/// # `calculate_phi`
+/// # `calculate_phi()`
 ///
 /// ## Purpose
 /// This is the core computational engine for Approximate Entropy (ApEn). It calculates a statistical
@@ -17,22 +17,23 @@ use std::collections::HashMap;
 /// It works by measuring the logarithmic frequency of repeating patterns of a given length (`m`)
 /// within a tolerance radius (`r`).
 ///
-/// 1.  **Form Embedding Vectors:** The input time series is converted into a set of `N-m+1`
+/// 1.  Form Embedding Vectors: The input time series is converted into a set of `N-m+1`
 ///     overlapping vectors of length `m`. For example, the series `[1, 2, 3, 4]` with `m=2`
 ///     becomes `[[1, 2], [2, 3], [3, 4]]`.
 ///
-/// 2.  **Count Similar Patterns:** For each embedding vector `x_i`, we count how many other
+/// 2.  Count Similar Patterns: For each embedding vector `x_i`, we count how many other
 ///     vectors `x_j` are "close" to it. Closeness is defined by the Chebyshev distance
 ///     (the maximum absolute difference between corresponding elements) being less than
 ///     the tolerance radius `r`. Let this count be `C_i(r)`.
 ///
-/// 3.  **Calculate Logarithmic Frequencies:** For each vector `x_i`, we calculate the
+/// 3.  Calculate Logarithmic Frequencies: For each vector `x_i`, we calculate the
 ///     logarithm of its pattern frequency: `log(C_i(r) / (N-m+1))`.
 ///
-/// 4.  **Average the Results:** The final φ value is the average of these logarithmic
+/// 4.  Average the Results: The final φ value is the average of these logarithmic
 ///     frequencies over all `i`.
 ///
 /// φ^m(r) = (1 / (N-m+1)) * Σ [log(C_i(r) / (N-m+1))]
+
 fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
     let n = data.len();
     if m == 0 || n < m {
@@ -84,8 +85,8 @@ fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
 /// and predictability in a time series. It quantifies the likelihood that runs of patterns
 /// that are close for `m` observations will remain close on the next incremental observation.
 ///
-/// A **low ApEn value** indicates a high degree of regularity and predictability in the time series.
-/// A **high ApEn value** indicates a high degree of randomness and unpredictability.
+/// A low ApEn value indicates a high degree of regularity and predictability in the time series.
+/// A high ApEn value indicates a high degree of randomness and unpredictability.
 ///
 /// It answers the question: "Given a short pattern of length `m`, how much new information
 /// (or uncertainty) is introduced when we extend the pattern to length `m+1`?"
