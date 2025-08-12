@@ -74,4 +74,62 @@ pub fn compute_lyapunov_spectrum(
     
     let num_steps = (t_total / t_reorth).ceil() as usize;
     let mut spectrum_history: Vec<DVector<f64>> = Vec::with_capacity(num_steps);
+
+    // --- 3. Main Loop ---
+    for i in 0..num_steps {
+        // Create a list of D+1 initial states for parallel integration
+        let mut initial_states: Vec<DVector<f64>> = Vec::with_capacity(state_dim + 1);
+        initial_states.push(main_y.clone());
+        for j in 0..state_dim {
+            initial_states.push(&main_y + eps * perturbation_w.column(j));
+        }
+
+        // --- 3a. Evolve in Parallel ---
+        // Use Rayon's `par_iter` to integrate all trajectories concurrently.
+        let final_states: Vec<DVector<f64>> = initial_states
+            .par_iter()
+            .map(|y0| {
+                
+                Python::with_gil(|py| {
+                    let y0_py = y0.as_slice().to_pyarray(py);
+                    let result_tuple = integrators::solve_rk45_adaptive(
+                        py, dynamics.clone(), y0_py.readonly(), 0.0, t_reorth, h_init, abstol, reltol
+                    ).unwrap();
+                    
+                    let traj_obj = result_tuple.as_ref(py).get_item(0).unwrap();
+                    let traj: &PyArray<f64, _> = traj_obj.extract().unwrap();
+                    let last_state = traj.as_array().outer_iter().last().unwrap();
+                    DVector::from_row_slice(last_state.as_slice().unwrap())
+                })
+            })
+            .collect();
+        
+        // Update the main trajectory's position
+        main_y = final_states[0].clone();
+
+        // --- 3b. Calculate Evolved Perturbation Matrix ---
+        let mut evolved_w = DMatrix::<f64>::zeros(state_dim, state_dim);
+        for j in 0..state_dim {
+            let evolved_perturbation = (&final_states[j + 1] - &main_y) / eps;
+            evolved_w.set_column(j, &evolved_perturbation);
+        }
+
+        // --- 3c. QR Decomposition ---
+        let qr = evolved_w.qr();
+        let q = qr.q();
+        let r = qr.r();
+
+        // --- 3d. Accumulate Logarithms ---
+        for j in 0..state_dim {
+            lyapunov_sums[j] += r[(j, j)].abs().ln();
+        }
+        
+        // --- 3e. Reset Orthonormal Basis ---
+        perturbation_w = q;
+        
+        current_t += t_reorth;
+        if current_t > 0.0 {
+            spectrum_history.push(&lyapunov_sums / current_t);
+        }
+    }
 }
