@@ -132,4 +132,15 @@ pub fn compute_lyapunov_spectrum(
             spectrum_history.push(&lyapunov_sums / current_t);
         }
     }
+
+    // --- 4. Average to get the final spectrum ---
+    let final_spectrum = lyapunov_sums / t_total;
+
+    // --- 5. Convert to Python objects and return ---
+    let final_spectrum_py = final_spectrum.as_slice().to_pyarray(py);
+    
+    let history_flat: Vec<f64> = spectrum_history.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
+    let history_array = PyArray::from_vec(py, history_flat).reshape((num_steps, state_dim))?;
+
+    Ok(PyTuple::new(py, &[final_spectrum_py, history_array]).to_object(py))
 }
