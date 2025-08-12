@@ -18,19 +18,42 @@ use rayon::prelude::*; // For parallel computation
 /// D-dimensional state space of a dynamical system. It is the most definitive quantitative
 /// measure of deterministic chaos.
 ///
+/// - λ > 0 (Positive Exponent): A hallmark of chaos. Indicates that trajectories
+///   diverge exponentially, leading to sensitive dependence on initial conditions (the "butterfly effect").
+/// - λ = 0 (Zero Exponent): Corresponds to motion along the trajectory itself. For a
+///   continuous chaotic system, there will always be at least one zero exponent.
+/// - λ < 0 (Negative Exponent): Indicates convergence of trajectories onto the attractor.
+///   These exponents are associated with the rate of dissipation in the system.
+///
 /// This function implements the classic algorithm by Benettin et al. for calculating the
 /// full Lyapunov spectrum. It works by evolving a set of D orthogonal perturbation vectors
 /// along a main trajectory and repeatedly measuring their stretching and rotation.
 ///
 /// ## The Algorithm
 ///
-/// 1.  Transient Phase
+/// 1.  Transient Phase: The main trajectory is first integrated for a `t_transient`
+///     period to ensure it has settled onto the system's attractor.
 ///
-/// 2.  Initialization
+/// 2.  Initialization: An orthonormal matrix `W` is initialized (typically the identity
+///     matrix). Each column of `W` represents a small perturbation vector from the main trajectory.
 ///
-/// 3.  Main Loop (Evolve & Re-orthogonalize)
+/// 3.  Main Loop (Evolve & Re-orthogonalize):
+///     a. Evolve: The main trajectory and D perturbed trajectories (`y + ε * w_i`) are
+///        simultaneously integrated forward for a short time interval `t_reorth`. This is
+///        done in parallel using Rayon for performance.
+///     b. Measure Stretch: The evolved perturbation vectors are calculated from the
+///        difference between the final states of the main and perturbed trajectories.
+///     c. QR Decomposition: This is the core of the method. The matrix of evolved
+///        perturbation vectors is decomposed into `Q` (an orthogonal matrix representing the
+///        new orientations) and `R` (an upper-triangular matrix representing the stretching
+///        factors in each of those new directions).
+///     d. Accumulate: The natural logarithms of the diagonal elements of the `R` matrix
+///        give the instantaneous rates of expansion. These are summed over time.
+///     e. Reset: The perturbation matrix `W` is reset to `Q`, providing a new, stable
+///        orthonormal basis for the next step.
 ///
-/// 4.  Average
+/// 4.  Average: After the total simulation time, the accumulated sums are divided by the
+///     total time to get the final average Lyapunov exponents.
 
 #[pyfunction]
 #[pyo3(signature = (
@@ -60,19 +83,25 @@ pub fn compute_lyapunov_spectrum(
     let transient_result = integrators::solve_rk45_adaptive(
         py, dynamics.clone(), initial_state, 0.0, t_transient, h_init, abstol, reltol
     )?;
+    // .as_ref(py): gets a safe reference to that Python object
+    // .get_item(0): attempts to get the first item from the tuple (the trajectory array)
     let transient_traj_obj = transient_result.as_ref(py).get_item(0)?;
+
     let transient_traj: &PyArray<f64, _> = transient_traj_obj.extract()?;
     
-    // Convert PyArray into an ArrayView for ndarray to perform fast operations on
+    // .as_array() = convert PyArray into an ArrayView for ndarray to perform fast operations on
     let last_row = transient_traj.as_array().outer_iter().last().unwrap();
     let mut main_y = DVector::from_row_slice(last_row.as_slice().unwrap());
 
     // --- 2. Initialization for Main Loop ---
+    // DMatrix: A Dynamically sized Matrix
     let mut perturbation_w = DMatrix::<f64>::identity(state_dim, state_dim);
+    // DVector: A Dynamically sized column Vector
     let mut lyapunov_sums = DVector::<f64>::zeros(state_dim);
     let mut current_t = 0.0;
     
     let num_steps = (t_total / t_reorth).ceil() as usize;
+    // ::with_capacity = performance optimization for creating a Rust `Vec`
     let mut spectrum_history: Vec<DVector<f64>> = Vec::with_capacity(num_steps);
 
     // --- 3. Main Loop ---
@@ -85,27 +114,36 @@ pub fn compute_lyapunov_spectrum(
         }
 
         // --- 3a. Evolve in Parallel ---
-        // Use Rayon's `par_iter` to integrate all trajectories concurrently.
+        // Use Rayon's parallel iterator to process the list of initial states concurrently
         let final_states: Vec<DVector<f64>> = initial_states
             .par_iter()
+            // .map() applies the following closure to each item in parallel
             .map(|y0| {
-                
+                // For each starting state y0, we must acquire the GIL to call Python
                 Python::with_gil(|py| {
+                    // Convert the Rust DVector `y0` into a NumPy array `y0_py`
                     let y0_py = y0.as_slice().to_pyarray(py);
+                    // Call our adaptive integrator function from Rust
                     let result_tuple = integrators::solve_rk45_adaptive(
                         py, dynamics.clone(), y0_py.readonly(), 0.0, t_reorth, h_init, abstol, reltol
-                    ).unwrap();
+                    ).unwrap(); // .unwrap() assumes the integration was successful
                     
+                    // Get the trajectory (item 0) from the (trajectory, times) tuple
                     let traj_obj = result_tuple.as_ref(py).get_item(0).unwrap();
+                    // Extract it into a Rust-readable NumPy array reference
                     let traj: &PyArray<f64, _> = traj_obj.extract().unwrap();
+                    // Get the last row of the trajectory array
                     let last_state = traj.as_array().outer_iter().last().unwrap();
+                    // Convert that last row back into a DVector, which is the return value of the closure
                     DVector::from_row_slice(last_state.as_slice().unwrap())
                 })
             })
+            // .collect() gathers the results from all parallel tasks into a single Vec<DVector<f64>>
             .collect();
         
         // Update the main trajectory's position
-        main_y = final_states[0].clone();
+        // note: .clone() is done because we need to have the same data in two places at once (ownership)
+        main_y = final_states[0].clone(); 
 
         // --- 3b. Calculate Evolved Perturbation Matrix ---
         let mut evolved_w = DMatrix::<f64>::zeros(state_dim, state_dim);
@@ -115,6 +153,10 @@ pub fn compute_lyapunov_spectrum(
         }
 
         // --- 3c. QR Decomposition ---
+        // It is a standard linear algebra technique that splits a matrix into two special matrices:
+        // - An orthogonal matrix Q = new orientations of your stretched vectors
+        // - An upper-triangular matrix R = stretching factors (the growth or shrinkage)
+        //   that happened along each of the new Q directions
         let qr = evolved_w.qr();
         let q = qr.q();
         let r = qr.r();
