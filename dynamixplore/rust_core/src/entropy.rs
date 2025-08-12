@@ -1,4 +1,3 @@
-// In src/entropy.rs
 // This module is dedicated to computing information-theoretic properties of time series data.
 
 use pyo3::prelude::*;
@@ -7,11 +6,11 @@ use std::collections::HashMap;
 
 // --- Helper function for Approximate Entropy ---
 
-/// # `calculate_phi()`
+/// # `calculate_phi`
 ///
 /// ## Purpose
 /// This is the core computational engine for Approximate Entropy (ApEn). It calculates a statistical
-/// measure of regularity, denoted as φ^m(r).
+/// measure of regularity, denoted as φ^m(r) (phi).
 ///
 /// ## Algorithm
 /// It works by measuring the logarithmic frequency of repeating patterns of a given length (`m`)
@@ -27,12 +26,12 @@ use std::collections::HashMap;
 ///     the tolerance radius `r`. Let this count be `C_i(r)`.
 ///
 /// 3.  Calculate Logarithmic Frequencies: For each vector `x_i`, we calculate the
-///     logarithm of its pattern frequency: `log(C_i(r) / (N-m+1))`.
+///     logarithm of its pattern frequency: `ln(C_i(r) / (N-m+1))`.
 ///
 /// 4.  Average the Results: The final φ value is the average of these logarithmic
 ///     frequencies over all `i`.
 ///
-/// φ^m(r) = (1 / (N-m+1)) * Σ [log(C_i(r) / (N-m+1))]
+/// φ^m(r) = (1 / (N-m+1)) * Σ [ln(C_i(r) / (N-m+1))]
 
 fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
     let n = data.len();
@@ -41,10 +40,12 @@ fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
     }
     let num_vectors = n - m + 1;
 
-    // Create the embedding vectors
+    // --- Create the embedding vectors ---
+    // note: creating a list of references (views) into the original data, not making copies of the numbers (very memory-efficient)
     let vectors: Vec<&[f64]> = (0..num_vectors).map(|i| &data[i..i + m]).collect();
     let mut log_counts_sum = 0.0;
 
+    // --- For each vector, count its neighbors ---
     for i in 0..num_vectors {
         let template_vec = vectors[i];
         let mut count = 0;
@@ -65,7 +66,8 @@ fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
             }
         }
         
-        let probability = (count as f64) / (num_vectors as f64);
+        // --- Calculate and sum the log probability ---
+        let probability: f64 = (count as f64) / (num_vectors as f64);
         if probability > 0.0 {
             log_counts_sum += probability.ln(); // Using natural log as is standard
         }
@@ -73,7 +75,6 @@ fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
 
     log_counts_sum / (num_vectors as f64)
 }
-
 
 // --- Public PyFunctions ---
 
@@ -85,8 +86,8 @@ fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
 /// and predictability in a time series. It quantifies the likelihood that runs of patterns
 /// that are close for `m` observations will remain close on the next incremental observation.
 ///
-/// A low ApEn value indicates a high degree of regularity and predictability in the time series.
-/// A high ApEn value indicates a high degree of randomness and unpredictability.
+/// - A low ApEn value indicates a high degree of regularity and predictability in the time series.
+/// - A high ApEn value indicates a high degree of randomness and unpredictability.
 ///
 /// It answers the question: "Given a short pattern of length `m`, how much new information
 /// (or uncertainty) is introduced when we extend the pattern to length `m+1`?"
@@ -105,6 +106,7 @@ pub fn compute_approximate_entropy(
     m: usize, // Embedding dimension
     r: f64,   // Tolerance radius
 ) -> PyResult<f64> {
+    // --- Input Validation ---
     if m < 1 {
         return Err(pyo3::exceptions::PyValueError::new_err("Embedding dimension 'm' must be at least 1."));
     }
@@ -114,16 +116,17 @@ pub fn compute_approximate_entropy(
 
     let data = time_series.as_slice()?;
     
-    // 2. Invoke the helper procedure for dimension `m`.
+    // --- 1. Invoke the helper procedure for dimension `m` ---
+    // `py.allow_threads` releases the GIL, allowing other Python threads to run
+    // while this potentially long-running Rust computation executes
     let phi_m = py.allow_threads(|| calculate_phi(data, m, r));
     
-    // 3. Invoke it again for dimension `m+1`.
+    // --- 2. Invoke it again for dimension `m+1` ---
     let phi_m_plus_1 = py.allow_threads(|| calculate_phi(data, m + 1, r));
 
-    // 4. The final result is the difference.
+    // --- 3. The final result is the difference ---
     Ok(phi_m - phi_m_plus_1)
 }
-
 
 /// # Permutation Entropy (PE)
 ///
@@ -147,6 +150,7 @@ pub fn compute_permutation_entropy(
     m: usize, // Embedding dimension (pattern length)
     tau: usize, // Time delay
 ) -> PyResult<f64> {
+    // --- Input Validation ---
     if m < 2 {
         return Err(pyo3::exceptions::PyValueError::new_err("Embedding dimension 'm' must be at least 2."));
     }
@@ -158,20 +162,28 @@ pub fn compute_permutation_entropy(
     let n = data.len();
     let required_len = (m - 1) * tau + 1;
     if n < required_len {
-        return Ok(0.0);
+        return Ok(0.0); // Not enough data to form any patterns, entropy is zero
     }
 
+    // A HashMap to store the frequency of each unique ordinal pattern
     let mut pattern_counts: HashMap<Vec<usize>, usize> = HashMap::new();
     let num_windows = n - required_len + 1;
 
+    // --- 1. Iterate Through Time Series and Create Ordinal Patterns ---
     for i in 0..num_windows {
+        // Create a window (sub-vector) of the time series data
         let window: Vec<f64> = (0..m).map(|j| data[i + j * tau]).collect();
+        
+        // Determine the ordinal pattern for the window
         let mut indexed_window: Vec<(usize, f64)> = window.iter().enumerate().map(|(idx, &val)| (idx, val)).collect();
         indexed_window.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         let pattern: Vec<usize> = indexed_window.iter().map(|(idx, _)| *idx).collect();
+        
+        // Update Pattern Frequencies
         *pattern_counts.entry(pattern).or_insert(0) += 1;
     }
 
+    // --- 2. Calculate Shannon Entropy from Frequencies ---
     if pattern_counts.is_empty() {
         return Ok(0.0);
     }
@@ -185,9 +197,10 @@ pub fn compute_permutation_entropy(
         }
     }
 
+    // --- 3. Normalize the Entropy ---
     let m_factorial = (1..=m).map(|i| i as f64).product::<f64>();
     let max_entropy = m_factorial.log2();
-
+    // Dividing the calculated entropy by the maximum possible entropy (log2(m!))
     if max_entropy > 0.0 {
         Ok(entropy / max_entropy)
     } else {
