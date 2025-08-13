@@ -244,3 +244,74 @@ pub fn solve_euler_implicit(py: Python, dynamics: PyObject, initial_state: PyRea
     let stepper = EulerImplicit;
     implicit_integration_loop(py, dynamics, initial_state, t_start, t_end, h, &stepper)
 }
+
+// --- 5. Helper Functions for Implicit Solvers ---
+
+/// Approximates the Jacobian matrix of the dynamics function `f` at a point (t, y)
+/// using central finite differences. J_ij = ∂f_i / ∂y_j
+fn approximate_jacobian<F>(t: f64, y: &DVector<f64>, f: &mut F, eps: f64) -> PyResult<DMatrix<f64>>
+where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
+    let dim = y.len();
+    let mut jacobian = DMatrix::<f64>::zeros(dim, dim);
+    let mut y_plus = y.clone();
+    let mut y_minus = y.clone();
+
+    for j in 0..dim {
+        y_plus[j] += eps;
+        y_minus[j] -= eps;
+
+        let f_plus = f(t, &y_plus)?;
+        let f_minus = f(t, &y_minus)?;
+
+        let column = (f_plus - f_minus) / (2.0 * eps);
+        jacobian.set_column(j, &column);
+
+        // Reset for the next iteration
+        y_plus[j] = y[j];
+        y_minus[j] = y[j];
+    }
+    Ok(jacobian)
+}
+
+/// Solves the non-linear system G(x) = 0 for x using the Newton-Raphson method.
+fn newton_raphson_solve<G, F>(
+    g: G,
+    initial_guess: DVector<f64>,
+    t_next: f64,
+    f: &mut F,
+) -> PyResult<DVector<f64>>
+where
+    G: Fn(&DVector<f64>) -> PyResult<DVector<f64>>,
+    F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>>,
+{
+    let mut x = initial_guess;
+    let dim = x.len();
+    let identity = DMatrix::<f64>::identity(dim, dim);
+    
+    // Solver parameters
+    let max_iter = 20;
+    let tolerance = 1e-8;
+    let h = 0.01; // Step size for implicit step, needed for Jacobian of G
+    let jacobian_eps = 1e-6; // Epsilon for finite difference Jacobian of f
+
+    for _ in 0..max_iter {
+        let g_eval = g(&x)?;
+        if g_eval.norm() < tolerance {
+            return Ok(x); // Converged
+        }
+
+        // The Jacobian of G(x) = x - y - h*f(t,x) is J_G = I - h * J_f
+        let jacobian_f = approximate_jacobian(t_next, &x, f, jacobian_eps)?;
+        let jacobian_g = &identity - h * jacobian_f;
+
+        // Solve the linear system J_G * delta_x = -G(x) for the update step delta_x
+        if let Some(lu) = jacobian_g.lu().try_inverse() {
+            let delta_x = lu * -g_eval;
+            x += delta_x;
+        } else {
+            return Err(PyValueError::new_err("Failed to solve linear system in Newton's method (matrix is singular)."));
+        }
+    }
+
+    Err(PyValueError::new_err("Newton's method did not converge."))
+}
