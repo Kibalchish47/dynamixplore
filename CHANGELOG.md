@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.4.0...dynamixplore-v0.5.0) (2025-08-13)
+
+
+### Features
+
+* implemented dx_core demo script ([a9ecade](https://github.com/Kibalchish47/dynamixplore/commit/a9ecade82399815543c8cbcbc0068252bd73e115))
+
+
+### Documentation
+
+* configured `tests.yml` ([c2c1d88](https://github.com/Kibalchish47/dynamixplore/commit/c2c1d88696274fa51328d2fa740e0c4100a9b923))
+* configured Sphinx ([9cbd618](https://github.com/Kibalchish47/dynamixplore/commit/9cbd618e39cbaf1a2fc25e2d3d7e0f76525a5a81))
+* created basic documentation ([03c827e](https://github.com/Kibalchish47/dynamixplore/commit/03c827eee083a2e5eb709969fa857ec2ba7f2dc0))
+* customizing Sphinx setup ([ab67549](https://github.com/Kibalchish47/dynamixplore/commit/ab6754907e31158fc1806b88eca1d21ff4589d3f))
+* fixed `CI.yml` + added benchmark files ([7a179a9](https://github.com/Kibalchish47/dynamixplore/commit/7a179a926af9dd7ce6dac6683966186e4433173a))
+* updated GitHub workflow ([29d7614](https://github.com/Kibalchish47/dynamixplore/commit/29d761456f7d596f971363c7f8bc4c1f24a14512))
+* wrote analysis tests ([c7683d6](https://github.com/Kibalchish47/dynamixplore/commit/c7683d6c86236598664423944fbb99678c807ddc))
+* wrote simulation tests ([580ccc5](https://github.com/Kibalchish47/dynamixplore/commit/580ccc50caa6edcfa0222bdbe3492cb226319d04))
+
 ## [0.4.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.3.0...dynamixplore-v0.4.0) (2025-08-12)
 
 
