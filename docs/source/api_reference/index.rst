@@ -1,13 +1,32 @@
 API Reference
 =============
 
-This section contains the auto-generated API reference documentation.
+This section provides the complete, auto-generated API reference for the `DynamiXplore` library. The docstrings from the core Python and Rust modules are rendered here for detailed information on every function, class, and method.
 
-.. automodule:: dynamixplore.simulation
-   :members:
+Core Rust Module (`dx_core`)
+----------------------------
 
-.. automodule:: dynamixplore.analysis
-   :members:
+This module contains the high-performance functions written in Rust, exposed to Python via PyO3. These functions form the computational backbone of the library.
 
-.. automodule:: dynamixplore.visualize
+.. automodule:: dx_core
    :members:
+   :undoc-members:
+   :show-inheritance:
+
+..
+   Note: In a full library, you would have Python wrapper classes.
+   For example, you would add sections for your `simulation.py`,
+   `analysis.py`, and `visualize.py` modules like this:
+
+   Simulation (`dynamixplore.simulation`)
+   -------------------------------------
+
+   .. automodule:: dynamixplore.simulation
+      :members:
+
+   Analysis (`dynamixplore.analysis`)
+   ---------------------------------
+
+   .. automodule:: dynamixplore.analysis
+      :members:
+

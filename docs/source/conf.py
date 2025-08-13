@@ -33,3 +33,11 @@ html_static_path = ['_static']
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
+
+# -- Options for Sphinx-Gallery --
+sphinx_gallery_conf = {
+    # path to your example scripts
+    'examples_dirs': '../../examples',
+    # path to where to save gallery generated output
+    'gallery_dirs': 'auto_examples',
+}
