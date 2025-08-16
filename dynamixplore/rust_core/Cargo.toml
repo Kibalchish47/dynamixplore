@@ -1,6 +1,19 @@
 [package]
 name = "rust_core"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+
+# This was on the root Cargo.toml
+[lib]
+name = "dynamixplore"
+crate-type = ["cdylib"]
 
 [dependencies]
+# You need to enable some extra features to make an extension module via PyO3.
+pyo3 = { version = "0.25.0", features = ["abi3", "extension-module"] }
+
+# Where were the rest of your dependencies?
+nalgebra = "0.34.0"
+numpy = "0.25.0"
+rayon = "1.11.0"
+dashmap = "6.1.0"

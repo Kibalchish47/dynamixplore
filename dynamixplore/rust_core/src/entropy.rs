@@ -32,7 +32,6 @@ use std::collections::HashMap;
 ///     frequencies over all `i`.
 ///
 /// φ^m(r) = (1 / (N-m+1)) * Σ [ln(C_i(r) / (N-m+1))]
-
 fn calculate_phi(data: &[f64], m: usize, r: f64) -> f64 {
     let n = data.len();
     if m == 0 || n < m {

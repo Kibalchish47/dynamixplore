@@ -1,12 +1,11 @@
-[package]
+# Since your Rust package lives in a subfolder, I will make this a workspace.
+#
+# This may not work properly with PyO3, so you might need to fix that.
+[workspace]
+members = ["dynamixplore/rust_core"]
+
+[workspace.package]
+authors = []
 name = "dynamixplore"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "dynamixplore"
-crate-type = ["cdylib"]
-
-[dependencies]
-pyo3 = "0.25.0"
+edition = "2024"

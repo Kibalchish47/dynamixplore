@@ -81,14 +81,23 @@ pub fn compute_lyapunov_spectrum(
     // We integrate the system to let it settle onto the attractor.
     // We only need the final state, so we can discard the trajectory itself.
     let transient_result = integrators::solve_rk45_adaptive(
-        py, dynamics.clone(), initial_state, 0.0, t_transient, h_init, abstol, reltol
+        py,
+        dynamics.clone_ref(py),
+        initial_state,
+        0.0,
+        t_transient,
+        h_init,
+        abstol,
+        reltol,
     )?;
+
+    let transient_result = transient_result.downcast_bound::<pyo3::types::PyTuple>(py)?;
     // .as_ref(py): gets a safe reference to that Python object
     // .get_item(0): attempts to get the first item from the tuple (the trajectory array)
-    let transient_traj_obj = transient_result.as_ref(py).get_item(0)?;
+    let transient_traj_obj = transient_result.get_item(0)?;
 
-    let transient_traj: &PyArray<f64, _> = transient_traj_obj.extract()?;
-    
+    let transient_traj: PyArray<f64, _> = pyo3::Bound::<pyo3::PyAny>::extract_bound(&transient_traj_obj)?;
+
     // .as_array() = convert PyArray into an ArrayView for ndarray to perform fast operations on
     let last_row = transient_traj.as_array().outer_iter().last().unwrap();
     let mut main_y = DVector::from_row_slice(last_row.as_slice().unwrap());
@@ -99,7 +108,7 @@ pub fn compute_lyapunov_spectrum(
     // DVector: A Dynamically sized column Vector
     let mut lyapunov_sums = DVector::<f64>::zeros(state_dim);
     let mut current_t = 0.0;
-    
+
     let num_steps = (t_total / t_reorth).ceil() as usize;
     // ::with_capacity = performance optimization for creating a Rust `Vec`
     let mut spectrum_history: Vec<DVector<f64>> = Vec::with_capacity(num_steps);
@@ -125,9 +134,17 @@ pub fn compute_lyapunov_spectrum(
                     let y0_py = y0.as_slice().to_pyarray(py);
                     // Call our adaptive integrator function from Rust
                     let result_tuple = integrators::solve_rk45_adaptive(
-                        py, dynamics.clone(), y0_py.readonly(), 0.0, t_reorth, h_init, abstol, reltol
-                    ).unwrap(); // .unwrap() assumes the integration was successful
-                    
+                        py,
+                        dynamics.clone(),
+                        y0_py.readonly(),
+                        0.0,
+                        t_reorth,
+                        h_init,
+                        abstol,
+                        reltol,
+                    )
+                    .unwrap(); // .unwrap() assumes the integration was successful
+
                     // Get the trajectory (item 0) from the (trajectory, times) tuple
                     let traj_obj = result_tuple.as_ref(py).get_item(0).unwrap();
                     // Extract it into a Rust-readable NumPy array reference
@@ -140,10 +157,10 @@ pub fn compute_lyapunov_spectrum(
             })
             // .collect() gathers the results from all parallel tasks into a single Vec<DVector<f64>>
             .collect();
-        
+
         // Update the main trajectory's position
         // note: .clone() is done because we need to have the same data in two places at once (ownership)
-        main_y = final_states[0].clone(); 
+        main_y = final_states[0].clone();
 
         // --- 3b. Calculate Evolved Perturbation Matrix ---
         let mut evolved_w = DMatrix::<f64>::zeros(state_dim, state_dim);
@@ -165,10 +182,10 @@ pub fn compute_lyapunov_spectrum(
         for j in 0..state_dim {
             lyapunov_sums[j] += r[(j, j)].abs().ln();
         }
-        
+
         // --- 3e. Reset Orthonormal Basis ---
         perturbation_w = q;
-        
+
         current_t += t_reorth;
         if current_t > 0.0 {
             spectrum_history.push(&lyapunov_sums / current_t);
@@ -180,8 +197,11 @@ pub fn compute_lyapunov_spectrum(
 
     // --- 5. Convert to Python objects and return ---
     let final_spectrum_py = final_spectrum.as_slice().to_pyarray(py);
-    
-    let history_flat: Vec<f64> = spectrum_history.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
+
+    let history_flat: Vec<f64> = spectrum_history
+        .into_iter()
+        .flat_map(|v| v.into_iter().cloned())
+        .collect();
     let history_array = PyArray::from_vec(py, history_flat).reshape((num_steps, state_dim))?;
 
     Ok(PyTuple::new(py, &[final_spectrum_py, history_array]).to_object(py))

@@ -8,10 +8,13 @@ mod integrators;
 mod entropy;
 mod stats;
 
+// Missing module import:
+mod lyapunov;
+
 // This function defines the Python module.
 // The name of the function (`dx_core`) determines the name of the module in Python.
 #[pymodule]
-fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
+fn dx_core(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     // --- Add Integrator Functions ---
     m.add_function(wrap_pyfunction!(integrators::solve_rk45_adaptive, m)?)?;
     m.add_function(wrap_pyfunction!(integrators::solve_rk4_explicit, m)?)?;
@@ -26,6 +29,6 @@ fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
 
     // --- Add Lyapunov Spectrum Function ---
     m.add_function(wrap_pyfunction!(lyapunov::compute_lyapunov_spectrum, m)?)?;
-    
+
     Ok(())
 }
