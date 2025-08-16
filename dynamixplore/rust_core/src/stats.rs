@@ -94,9 +94,11 @@ pub fn compute_invariant_measure(
     // --- 5. Convert the Rust DashMap to a Python Dictionary ---
     // The parallel computation is done. Now, on the main thread, we convert the result.
     let result_dict = PyDict::new(py);
-    for item in histogram.into_iter() {
-        let key = item.key(); // The Vec<i64> of bin coordinates
-        let value = item.value(); // The count
+
+    // (1) This is not how iterate over dicts, use (key, value)
+    for item in histogram.into_iter() {       //  |
+        let key = item.key(); // The Vec<i64> of bin coordinates // (1)
+        let value = item.value(); // The count                   //  |
         
         // The key must be a hashable Python type, so we convert the Vec<i64> to a Python tuple.
         result_dict.set_item(key, value)?;

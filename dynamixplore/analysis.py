@@ -44,7 +44,9 @@ class Analysis:
         self.n_points, self.n_dims = trajectory.shape
 
     def lyapunov_spectrum(
-        self, 
+        self,
+
+        # Don't be lazy here: which argument types, and which return type ?
         dynamics: Callable, 
         transient_time: float = 100.0, 
         run_time: float = 1000.0,

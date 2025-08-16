@@ -108,7 +108,10 @@ class Simulation:
 
     # The `run` method is where the action happens. It's designed to be simple
     # for the user to call: `sim.run()`.
-    def run(self, solver: str = 'RK45') -> Analysis:
+    def run(self, solver: str = 'RK45') -> Analysis: #
+        # ^ Don't use `str` here, prefer `Literal["rk45_adaptive", "rk4_explicit"]`
+        # (1) Also, the default parameter for `solver` doesn't even work... 
+
         """
         Runs the simulation using the configured parameters.
 
@@ -127,20 +130,22 @@ class Simulation:
             Analysis: An Analysis object containing the resulting trajectory and
                       time points, ready for further processing and visualization.
         """
+        # I don't actually disagree with this approach.
+
         # --- Backend Selection (Dispatcher) ---
         # Instead of a long `if/elif/else` chain, we use a dictionary to map the
         # user-friendly solver string to the actual Rust function. This is a
         # cleaner, more scalable design.
-        solver_map = {
-            'rk45_adaptive': rust_core.solve_rk45_adaptive,
-            'rk4_explicit': rust_core.solve_rk4_explicit,
-            'euler_explicit': rust_core.solve_euler_explicit,
-            'rk4_implicit': rust_core.solve_rk4_implicit,
-            'euler_implicit': rust_core.solve_euler_implicit
-        }
-
-        # We check if the user's requested solver is available.
-        if solver not in solver_map:
+        solver_map = {                                          #     |
+            'rk45_adaptive': rust_core.solve_rk45_adaptive,     #     |
+            'rk4_explicit': rust_core.solve_rk4_explicit,       #     |
+            'euler_explicit': rust_core.solve_euler_explicit,   #     |
+            'rk4_implicit': rust_core.solve_rk4_implicit,       #    (1)
+            'euler_implicit': rust_core.solve_euler_implicit    #     |
+        }                                                       #     |
+                                                                #     |
+        # We check if the user's requested solver is available. #     |
+        if solver not in solver_map:                            #     |
             # If not, we raise an error with a helpful message listing all
             # available options, which we get directly from the dictionary keys.
             supported_solvers = list(solver_map.keys())
@@ -150,7 +155,7 @@ class Simulation:
             )
 
         # We retrieve the correct Rust solver function from our map.
-        solver_func = solver_map[solver]
+        solver_func = solver_map[solver]                        #    (1)
 
         # --- Argument Preparation and The Bridge Call to Rust ---
         # We pack the arguments common to all solvers into a tuple.

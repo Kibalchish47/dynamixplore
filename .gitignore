@@ -1,4 +1,12 @@
+# You need to be careful about your target dirs and how they interact with git.
+# I have made the decision that you probably meant to make a workspace.
+#
+# I have also deleted the files in the other target folder, since `/target`
+# only covers a target directory at the root of the repo.
+#
+# For workspace, this can stay:
 /target
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -6,11 +6,16 @@ sphinx
 # A modern, clean theme for Sphinx websites
 pydata-sphinx-theme
 
+# To fix (2) in `conf.py`
+furo
+
 # For creating a gallery of examples from Python scripts
 sphinx-gallery
 
-# For understanding NumPy/Google style docstrings
-sphinx.ext.napoleon
+# This was ruining my pip install -r requirements.txt.
+# The sad thing is that it's not even necessary.
+"""# For understanding NumPy/Google style docstrings
+# sphinx.ext.napoleon"""
 
 # Your library's own dependencies, so examples can run
 numpy
