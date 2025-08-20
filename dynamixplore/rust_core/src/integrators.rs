@@ -120,7 +120,59 @@ impl<'py> Approach<'py> for Adaptive<'py> {
     where
         S: Stepper<'py, Self>,
     {
-        todo!();
+        let mut current_y = DVector::from_column_slice(self.initial_state.as_slice()?);
+        let mut current_t = self.t_start;
+        let mut current_h = self.initial_h;
+
+        let mut times: Vec<f64> = Vec::new();
+        let mut trajectory: Vec<DVector<f64>> = Vec::new();
+        times.push(current_t);
+        trajectory.push(current_y.clone());
+
+        let mut call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
+            let y_py = y_eval.as_slice().to_pyarray(py);
+            let args = PyTuple::new(py, &[t_eval.into_py(py), y_py.into_py(py)]);
+            let result = self.dynamics.call(py, args, None)?;
+            let py_array: &PyArray<f64, _> = result.extract(py)?;
+            Ok(DVector::from_column_slice(py_array.readonly().as_slice()?))
+        };
+
+        const SAFETY: f64 = 0.9;
+        const MIN_FACTOR: f64 = 0.2;
+        const MAX_FACTOR: f64 = 10.0;
+
+        while current_t < self.t_end {
+            if current_t + current_h > self.t_end {
+                current_h = self.t_end - current_t;
+            }
+
+            let (y_next, error_vec) = stepper.step(current_t, &current_y, current_h, &mut call_dynamics)?;
+
+            let error_norm = error_vec.norm();
+            let y_norm = current_y.norm().max(y_next.norm());
+            let tolerance = self.abstol + self.reltol * y_norm;
+            let error = error_norm / tolerance;
+
+            if error <= 1.0 { // Step is accepted
+                current_t += current_h;
+                current_y = y_next;
+                times.push(current_t);
+                trajectory.push(current_y.clone());
+            }
+
+            let mut factor = SAFETY * (1.0 / error).powf(0.2);
+            factor = factor.max(MIN_FACTOR).min(MAX_FACTOR);
+            current_h *= factor;
+        }
+
+        // Convert trajectory and times to Python objects
+        let num_points = trajectory.len();
+        let state_dim = if num_points > 0 { trajectory[0].len() } else { 0 };
+        let flat_trajectory: Vec<f64> = trajectory.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
+        let traj_array = PyArray::from_vec(py, flat_trajectory).reshape((num_points, state_dim))?;
+        let time_array = PyArray::from_vec(py, times);
+
+        Ok(PyTuple::new(py, &[traj_array, time_array]).to_object(py))
     }
 }
 
