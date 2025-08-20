@@ -81,7 +81,35 @@ impl<'py> Approach<'py> for Explicit<'py> {
     where
         S: Stepper<'py, Self>,
     {
-        todo!();
+        let initial_y = DVector::from_column_slice(self.initial_state.as_slice()?);
+        let mut current_t = self.t_start;
+        let mut current_y = initial_y;
+
+        let num_steps = ((self.t_end - self.t_start) / self.h).ceil() as usize;
+        let mut trajectory: Vec<DVector<f64>> = Vec::with_capacity(num_steps + 1);
+        trajectory.push(current_y.clone());
+
+        let mut call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
+            let y_py = y_eval.as_slice().to_pyarray(py);
+            let args = PyTuple::new(py, &[t_eval.into_py(py), y_py.into_py(py)]);
+            let result = self.dynamics.call(py, args, None)?;
+            let py_array: &PyArray<f64, _> = result.extract(py)?;
+            Ok(DVector::from_column_slice(py_array.readonly().as_slice()?))
+        };
+
+        for _ in 0..num_steps {
+            let y_next = stepper.step(current_t, &current_y, self.h, &mut call_dynamics)?;
+            current_y = y_next;
+            current_t += self.h;
+            trajectory.push(current_y.clone());
+        }
+
+        // Convert trajectory to Python object
+        let num_points = trajectory.len();
+        let state_dim = if num_points > 0 { trajectory[0].len() } else { 0 };
+        let flat_trajectory: Vec<f64> = trajectory.into_iter().flat_map(|v| v.into_iter().cloned()).collect();
+        let result_array = PyArray::from_vec(py, flat_trajectory).reshape((num_points, state_dim))?;
+        Ok(result_array.to_object(py))
     }
 }
 
