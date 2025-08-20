@@ -224,18 +224,44 @@ pub struct Rk45;
 impl<'py> Stepper<'py, Adaptive<'py>> for Rk45 {
     fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<<Adaptive<'py> as Approach<'py>>::Ret>
     where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
-        todo!();
+        const C2: f64 = 1.0/5.0; const C3: f64 = 3.0/10.0; const C4: f64 = 4.0/5.0; const C5: f64 = 8.0/9.0;
+        const A21: f64 = 1.0/5.0; const A31: f64 = 3.0/40.0; const A32: f64 = 9.0/40.0; const A41: f64 = 44.0/45.0;
+        const A42: f64 = -56.0/15.0; const A43: f64 = 32.0/9.0; const A51: f64 = 19372.0/6561.0;
+        const A52: f64 = -25360.0/2187.0; const A53: f64 = 64448.0/6561.0; const A54: f64 = -212.0/729.0;
+        const A61: f64 = 9017.0/3168.0; const A62: f64 = -355.0/33.0; const A63: f64 = 46732.0/5247.0;
+        const A64: f64 = 49.0/176.0; const A65: f64 = -5103.0/18656.0; const A71: f64 = 35.0/384.0;
+        const A72: f64 = 0.0; const A73: f64 = 500.0/1113.0; const A74: f64 = 125.0/192.0;
+        const A75: f64 = -2187.0/6784.0; const A76: f64 = 11.0/84.0;
+        const B1: f64 = 35.0/384.0; const B2: f64 = 0.0; const B3: f64 = 500.0/1113.0;
+        const B4: f64 = 125.0/192.0; const B5: f64 = -2187.0/6784.0; const B6: f64 = 11.0/84.0; const B7: f64 = 0.0;
+        const B_STAR_1: f64 = 5179.0/57600.0; const B_STAR_2: f64 = 0.0; const B_STAR_3: f64 = 7571.0/16695.0;
+        const B_STAR_4: f64 = 393.0/640.0; const B_STAR_5: f64 = -92097.0/339200.0; const B_STAR_6: f64 = 187.0/2100.0;
+        const B_STAR_7: f64 = 1.0/40.0;
+        let k1 = h * f(t, y)?;
+        let k2 = h * f(t + C2 * h, &(y + A21 * &k1))?;
+        let k3 = h * f(t + C3 * h, &(y + A31 * &k1 + A32 * &k2))?;
+        let k4 = h * f(t + C4 * h, &(y + A41 * &k1 + A42 * &k2 + A43 * &k3))?;
+        let k5 = h * f(t + C5 * h, &(y + A51 * &k1 + A52 * &k2 + A53 * &k3 + A54 * &k4))?;
+        let k6 = h * f(t + h, &(y + A61 * &k1 + A62 * &k2 + A63 * &k3 + A64 * &k4 + A65 * &k5))?;
+        let k7 = h * f(t + h, &(y + A71 * &k1 + A72 * &k2 + A73 * &k3 + A74 * &k4 + A75 * &k5 + A76 * &k6))?;
+        let y_next_5 = y + B1*&k1 + B2*&k2 + B3*&k3 + B4*&k4 + B5*&k5 + B6*&k6 + B7*&k7;
+        let y_next_4 = y + B_STAR_1*&k1 + B_STAR_2*&k2 + B_STAR_3*&k3 + B_STAR_4*&k4 + B_STAR_5*&k5 + B_STAR_6*&k6 + B_STAR_7*&k7;
+        let error_vec = &y_next_5 - &y_next_4;
+        Ok((y_next_5, error_vec))
     }
 }
 
-pub struct Rk4;
+#[derive(Copy, Clone)] pub struct Rk4;
 impl<'py> Stepper<'py, Explicit<'py>> for Rk4 {
     fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<<Explicit<'py> as Approach<'py>>::Ret>
     where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
-        todo!();
+        let k1 = f(t, y)?;
+        let k2 = f(t + 0.5 * h, &(y + 0.5 * h * &k1))?;
+        let k3 = f(t + 0.5 * h, &(y + 0.5 * h * &k2))?;
+        let k4 = f(t + h, &(y + h * &k3))?;
+        Ok(y + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4))
     }
 }
-
 impl<'py> Stepper<'py, Implicit<'py>> for Rk4 {
     fn step<F>(&self, _t: f64, _y: &DVector<f64>, _h: f64, _f: &mut F) -> PyResult<<Implicit<'py> as Approach<'py>>::Ret>
     where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
@@ -243,20 +269,24 @@ impl<'py> Stepper<'py, Implicit<'py>> for Rk4 {
     }
 }
 
-pub struct Euler;
+#[derive(Copy, Clone)] pub struct Euler;
 impl<'py> Stepper<'py, Explicit<'py>> for Euler {
     fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<<Explicit<'py> as Approach<'py>>::Ret>
     where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
         let k1 = f(t, y)?;
-        let y_next = y + h * k1;
-        Ok(y_next)
+        Ok(y + h * k1)
     }
 }
-
 impl<'py> Stepper<'py, Implicit<'py>> for Euler {
     fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<<Implicit<'py> as Approach<'py>>::Ret>
     where F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>> {
-        todo!();
+        let t_next = t + h;
+        let g = |y_next_guess: &DVector<f64>| -> PyResult<DVector<f64>> {
+            let f_eval = f(t_next, y_next_guess)?;
+            Ok(y_next_guess - y - h * f_eval)
+        };
+        let initial_guess = y + h * f(t, y)?;
+        newton_raphson_solve(g, initial_guess, t_next, h, f)
     }
 }
 
