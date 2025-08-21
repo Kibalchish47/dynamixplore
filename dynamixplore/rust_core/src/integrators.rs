@@ -362,105 +362,187 @@ where
     Err(PyValueError::new_err("Newton's method did not converge."))
 }
 
+// --- 6. NEW: PyO3 Class Definitions for Python API ---
 
-// --- 6. Public-Facing PyFunctions ---
+// --- Parameter Structs ---
+// These are exposed to Python as data classes to hold the problem definition.
 
-#[pyfunction]
-#[pyo3(signature = (dynamics, initial_state, t_start, t_end, h, abstol=1e-6, reltol=1e-3))]
-pub fn solve_rk45_adaptive(
-    py: Python,
+#[pyclass(name = "Explicit")]
+#[derive(Clone)]
+struct ExplicitParams {
+    #[pyo3(get, set)]
     dynamics: PyObject,
-    initial_state: PyReadonlyArray1<f64>,
+    #[pyo3(get, set)]
+    initial_state: PyObject,
+    #[pyo3(get, set)]
     t_start: f64,
+    #[pyo3(get, set)]
     t_end: f64,
+    #[pyo3(get, set)]
     h: f64,
+}
+
+#[pymethods]
+impl ExplicitParams {
+    #[new]
+    fn new(dynamics: PyObject, initial_state: PyObject, t_start: f64, t_end: f64, h: f64) -> Self {
+        Self { dynamics, initial_state, t_start, t_end, h }
+    }
+}
+
+#[pyclass(name = "Implicit")]
+#[derive(Clone)]
+struct ImplicitParams {
+    #[pyo3(get, set)]
+    dynamics: PyObject,
+    #[pyo3(get, set)]
+    initial_state: PyObject,
+    #[pyo3(get, set)]
+    t_start: f64,
+    #[pyo3(get, set)]
+    t_end: f64,
+    #[pyo3(get, set)]
+    h: f64,
+}
+
+#[pymethods]
+impl ImplicitParams {
+    #[new]
+    fn new(dynamics: PyObject, initial_state: PyObject, t_start: f64, t_end: f64, h: f64) -> Self {
+        Self { dynamics, initial_state, t_start, t_end, h }
+    }
+}
+
+#[pyclass(name = "Adaptive")]
+#[derive(Clone)]
+struct AdaptiveParams {
+    #[pyo3(get, set)]
+    dynamics: PyObject,
+    #[pyo3(get, set)]
+    initial_state: PyObject,
+    #[pyo3(get, set)]
+    t_start: f64,
+    #[pyo3(get, set)]
+    t_end: f64,
+    #[pyo3(get, set)]
+    h: f64,
+    #[pyo3(get, set)]
     abstol: f64,
+    #[pyo3(get, set)]
     reltol: f64,
-) -> PyResult<PyObject> {
-    Adaptive {
-        dynamics,
-        initial_state,
-        t_start,
-        t_end,
-        initial_h: h,
-        abstol,
-        reltol,
-    }
-    .integration_loop(py, Rk45)
 }
 
-#[pyfunction]
-pub fn solve_rk4_explicit(
-    py: Python,
-    dynamics: PyObject,
-    initial_state: PyReadonlyArray1<f64>,
-    t_start: f64,
-    t_end: f64,
-    h: f64,
-) -> PyResult<PyObject> {
-    Explicit {
-        dynamics,
-        initial_state,
-        t_start,
-        t_end,
-        h,
+#[pymethods]
+impl AdaptiveParams {
+    #[new]
+    #[pyo3(signature = (dynamics, initial_state, t_start, t_end, h, abstol=1e-6, reltol=1e-3))]
+    fn new(
+        dynamics: PyObject,
+        initial_state: PyObject,
+        t_start: f64,
+        t_end: f64,
+        h: f64,
+        abstol: f64,
+        reltol: f64,
+    ) -> Self {
+        Self { dynamics, initial_state, t_start, t_end, h, abstol, reltol }
     }
-    .integration_loop(py, Rk4)
 }
 
-#[pyfunction]
-pub fn solve_euler_explicit(
-    py: Python,
-    dynamics: PyObject,
-    initial_state: PyReadonlyArray1<f64>,
-    t_start: f64,
-    t_end: f64,
-    h: f64,
-) -> PyResult<PyObject> {
-    Explicit {
-        dynamics,
-        initial_state,
-        t_start,
-        t_end,
-        h,
+// --- Solver Classes ---
+// These are the main classes users will interact with in Python.
+
+#[pyclass]
+struct Rk45;
+
+#[pymethods]
+impl Rk45 {
+    #[new]
+    fn new() -> Self { Rk45 }
+
+    /// Solves an ODE using the adaptive RK45 (Dormand-Prince) method.
+    fn solve<'py>(&self, py: Python<'py>, mode: PyObject) -> PyResult<PyObject> {
+        if let Ok(params) = mode.extract::<AdaptiveParams>(py) {
+            let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
+            Adaptive {
+                dynamics: params.dynamics,
+                initial_state,
+                t_start: params.t_start,
+                t_end: params.t_end,
+                initial_h: params.h,
+                abstol: params.abstol,
+                reltol: params.reltol,
+            }.integration_loop(py, Rk45)
+        } else {
+            Err(PyTypeError::new_err("RK45 solver requires an 'Adaptive' mode."))
+        }
     }
-    .integration_loop(py, Euler)
 }
 
-#[pyfunction]
-pub fn solve_rk4_implicit(
-    py: Python,
-    dynamics: PyObject,
-    initial_state: PyReadonlyArray1<f64>,
-    t_start: f64,
-    t_end: f64,
-    h: f64,
-) -> PyResult<PyObject> {
-    Implicit {
-        dynamics,
-        initial_state,
-        t_start,
-        t_end,
-        h,
+#[pyclass]
+struct Rk4;
+
+#[pymethods]
+impl Rk4 {
+    #[new]
+    fn new() -> Self { Rk4 }
+
+    /// Solves an ODE using the classic 4th-order Runge-Kutta method.
+    fn solve<'py>(&self, py: Python<'py>, mode: PyObject) -> PyResult<PyObject> {
+        if let Ok(params) = mode.extract::<ExplicitParams>(py) {
+            let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
+            Explicit {
+                dynamics: params.dynamics,
+                initial_state,
+                t_start: params.t_start,
+                t_end: params.t_end,
+                h: params.h,
+            }.integration_loop(py, Rk4)
+        } else if let Ok(params) = mode.extract::<ImplicitParams>(py) {
+            let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
+            Implicit {
+                dynamics: params.dynamics,
+                initial_state,
+                t_start: params.t_start,
+                t_end: params.t_end,
+                h: params.h,
+            }.integration_loop(py, Rk4)
+        } else {
+            Err(PyTypeError::new_err("RK4 solver requires an 'Explicit' or 'Implicit' mode."))
+        }
     }
-    .integration_loop(py, Rk4)
 }
 
-#[pyfunction]
-pub fn solve_euler_implicit(
-    py: Python,
-    dynamics: PyObject,
-    initial_state: PyReadonlyArray1<f64>,
-    t_start: f64,
-    t_end: f64,
-    h: f64,
-) -> PyResult<PyObject> {
-    Implicit {
-        dynamics,
-        initial_state,
-        t_start,
-        t_end,
-        h,
+#[pyclass]
+struct Euler;
+
+#[pymethods]
+impl Euler {
+    #[new]
+    fn new() -> Self { Euler }
+
+    /// Solves an ODE using the simple Euler method.
+    fn solve<'py>(&self, py: Python<'py>, mode: PyObject) -> PyResult<PyObject> {
+        if let Ok(params) = mode.extract::<ExplicitParams>(py) {
+            let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
+            Explicit {
+                dynamics: params.dynamics,
+                initial_state,
+                t_start: params.t_start,
+                t_end: params.t_end,
+                h: params.h,
+            }.integration_loop(py, Euler)
+        } else if let Ok(params) = mode.extract::<ImplicitParams>(py) {
+            let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
+            Implicit {
+                dynamics: params.dynamics,
+                initial_state,
+                t_start: params.t_start,
+                t_end: params.t_end,
+                h: params.h,
+            }.integration_loop(py, Euler)
+        } else {
+            Err(PyTypeError::new_err("Euler solver requires an 'Explicit' or 'Implicit' mode."))
+        }
     }
-    .integration_loop(py, Euler)
 }
