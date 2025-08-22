@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from typing import Optional, List, Tuple
 
 def plot_phase_portrait(
-    trajectory: np.ndarray, 
+    trajectory: np.ndarray,
     dims: Tuple[int, ...] = (0, 1, 2),
     title: str = "Phase Portrait"
 ) -> go.Figure:
@@ -23,7 +23,7 @@ def plot_phase_portrait(
     """
     if len(dims) not in [2, 3]:
         raise ValueError(f"Phase portrait can only be 2D or 3D, but got {len(dims)} dimensions.")
-    
+
     if max(dims) >= trajectory.shape[1]:
         raise ValueError(f"Invalid dimension index in {dims}. Trajectory only has {trajectory.shape[1]} dimensions.")
 
@@ -61,8 +61,8 @@ def plot_phase_portrait(
     return fig
 
 def plot_invariant_measure(
-    histogram: np.ndarray, 
-    x_bins: np.ndarray, 
+    histogram: np.ndarray,
+    x_bins: np.ndarray,
     y_bins: np.ndarray,
     title: str = "Invariant Measure Projection"
 ) -> go.Figure:
@@ -70,7 +70,7 @@ def plot_invariant_measure(
     Visualizes a 2D projection of the invariant measure as a heatmap.
 
     Args:
-        histogram (np.ndarray): A 2D NumPy array of counts from the Rust core.
+        histogram (np.ndarray): A 2D NumPy array of counts from Analysis.invariant_measure.
         x_bins (np.ndarray): A 1D array of the bin edges for the x-axis.
         y_bins (np.ndarray): A 1D array of the bin edges for the y-axis.
         title (str): The title for the plot.
