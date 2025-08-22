@@ -3,7 +3,7 @@ import pandas as pd
 from typing import Optional, Callable, List, Tuple
 
 # This relative import is safe because there are no more circular dependencies.
-from . import _core as rust_core
+from dynamixplore import _core as rust_core
 
 class Analysis:
     """

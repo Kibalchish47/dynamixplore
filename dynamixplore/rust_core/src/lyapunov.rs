@@ -73,7 +73,9 @@ impl Lyapunov {
         let num_steps = (t_total / t_reorth).ceil() as usize;
         let mut spectrum_history: Vec<DVector<f64>> = Vec::with_capacity(num_steps);
 
-        for _ in 0..num_steps {
+        println!("For loop!");
+        for s in 0..num_steps {
+            println!("Step {s}");
             let mut initial_states: Vec<DVector<f64>> = Vec::with_capacity(state_dim + 1);
             initial_states.push(main_y.clone());
             for j in 0..state_dim {
@@ -81,7 +83,9 @@ impl Lyapunov {
             }
 
             let final_states: Vec<DVector<f64>> = initial_states
-                .par_iter()
+                // TODO: Fix this bug 
+                // .par_iter() 
+                .iter()
                 .map(|y0| {
                     Python::with_gil(|py| {
                         let y0_py = y0.as_slice().to_pyarray_bound(py);

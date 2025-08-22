@@ -4,7 +4,7 @@ import numpy as np
 
 # This relative import is now safe because the circular dependency
 # on the Analysis class has been removed.
-from . import _core as rust_core
+from dynamixplore import _core as rust_core
 
 class Simulation:
     """

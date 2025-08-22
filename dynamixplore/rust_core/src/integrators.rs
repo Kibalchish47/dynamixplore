@@ -107,7 +107,8 @@ impl<'py> Approach<'py> for Adaptive<'py> {
     fn integration_loop<S>(self, py: Python, stepper: S) -> PyResult<PyObject>
     where
         S: Stepper<'py, Self>,
-    {
+        {
+        println!("#0");
         let mut current_y = DVector::from_column_slice(self.initial_state.as_slice()?);
         let mut current_t = self.t_start;
         let mut current_h = self.initial_h;
@@ -131,7 +132,9 @@ impl<'py> Approach<'py> for Adaptive<'py> {
         const MIN_FACTOR: f64 = 0.2;
         const MAX_FACTOR: f64 = 10.0;
 
+        println!("#1");
         while current_t < self.t_end {
+            println!("#2a - Loop");
             if current_t + current_h > self.t_end {
                 current_h = self.t_end - current_t;
             }
@@ -159,13 +162,15 @@ impl<'py> Approach<'py> for Adaptive<'py> {
 
             let factor = if error > 0.0 {
                 let factor = SAFETY * (1.0 / error).powf(0.2);
-                factor.max(MIN_FACTOR).min(MAX_FACTOR)
+                factor.clamp(MIN_FACTOR, MAX_FACTOR)
             } else {
                 MAX_FACTOR
             };
             current_h *= factor;
         }
 
+        println!("#3");
+        
         let num_points = trajectory.len();
         let state_dim = if num_points > 0 {
             trajectory[0].len()
@@ -173,15 +178,18 @@ impl<'py> Approach<'py> for Adaptive<'py> {
             0
         };
         let flat_trajectory: Vec<f64> = trajectory
-            .into_iter()
-            .flat_map(|v| v.iter().cloned().collect::<Vec<f64>>())
-            .collect();
+        .into_iter()
+        .flat_map(|v| v.iter().cloned().collect::<Vec<f64>>())
+        .collect();
         let traj_array =
-            PyArray::from_vec_bound(py, flat_trajectory).reshape((num_points, state_dim))?;
+        PyArray::from_vec_bound(py, flat_trajectory).reshape((num_points, state_dim))?;
         let time_array = PyArray::from_vec_bound(py, times);
         let result_tuple =
-            PyTuple::new_bound(py, &[traj_array.to_object(py), time_array.to_object(py)]);
-        Ok(result_tuple.to_object(py))
+        PyTuple::new_bound(py, &[traj_array.to_object(py), time_array.to_object(py)]);
+        println!("#4");
+        let a = Ok(result_tuple.to_object(py));
+        println!("Return");
+        a
     }
 }
 

@@ -3,10 +3,11 @@
 // the core Rust logic without involving the Python interpreter.
 
 // Declare all the library modules.
-mod entropy;
-mod integrators;
-mod lyapunov;
-mod stats;
+use dynamixplore::*;
+// mod entropy;
+// mod integrators;
+// mod lyapunov;
+// mod stats;
 
 use dashmap::DashMap;
 use ndarray::prelude::*;

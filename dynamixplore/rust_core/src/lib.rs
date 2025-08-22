@@ -3,41 +3,38 @@
 // with the Python interpreter.
 
 // Declare the modules corresponding to the other files in `src/`.
-mod entropy;
-mod integrators;
-mod lyapunov;
-mod stats;
+pub mod entropy;
+pub mod integrators;
+pub mod lyapunov;
+pub mod stats;
 
-// Use statements to bring the public classes from each module into scope.
-use entropy::Entropy;
-use integrators::{AdaptiveParams, Euler, ExplicitParams, ImplicitParams, Rk4, Rk45};
-use lyapunov::Lyapunov;
-use stats::Stats;
+#[cfg(test)]
+mod unit_test;
 
 use pyo3::prelude::*;
 
-/// # DynamiXplore Rust Core (`_core`)
-///
-/// This Python module, written in Rust, provides the high-performance computational
-/// backend for the DynamiXplore library.
 #[pymodule]
-// FIX: The name inside the pymodule macro MUST match the `[lib]` name in Cargo.toml.
-// This creates the `PyInit__core` function that Python looks for.
-fn _core(_py: Python, m: &PyModule) -> PyResult<()> {
-    // --- Register Solver Classes ---
-    m.add_class::<Rk45>()?;
-    m.add_class::<Rk4>()?;
-    m.add_class::<Euler>()?;
+mod dynamixplore {
+    use pyo3::prelude::*;
 
-    // --- Register Parameter Data Classes ---
-    m.add_class::<ExplicitParams>()?;
-    m.add_class::<ImplicitParams>()?;
-    m.add_class::<AdaptiveParams>()?;
+    /// # DynamiXplore Rust Core (`_core`)
+    ///
+    /// This Python module, written in Rust, provides the high-performance computational
+    /// backend for the DynamiXplore library.
+    #[pymodule]
+    mod _core {
+        // Use statements to bring the public classes from each module into scope.
+        #[rustfmt::skip]
+        #[pymodule_export]
+        use crate::integrators::{
+            // --- Register Solver Classes ---
+            Euler, Rk4, Rk45,
+            // --- Register Parameter Data Classes ---
+            AdaptiveParams, ExplicitParams, ImplicitParams, 
+        };
 
-    // --- Register Analysis Tool Classes ---
-    m.add_class::<Lyapunov>()?;
-    m.add_class::<Entropy>()?;
-    m.add_class::<Stats>()?;
-
-    Ok(())
+        // --- Register Analysis Tool Classes ---
+        #[pymodule_export]
+        use crate::{entropy::Entropy, lyapunov::Lyapunov, stats::Stats};
+    }
 }

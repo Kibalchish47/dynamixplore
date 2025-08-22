@@ -6,15 +6,18 @@ edition = "2021"
 [lib]
 # FIX: This is the critical change. The compiled library will now be `_core.so`.
 # This avoids any name collision with the parent package.
-name = "_core"
-crate-type = ["cdylib"]
+name = "dynamixplore"
+crate-type = ["cdylib", "lib"]
 
 [[bin]]
 name = "test_harness"
 path = "src/main.rs"
 
 [dependencies]
-pyo3 = { version = "0.21.2", features = ["extension-module"] }
+pyo3 = { version = "0.21.2", features = [
+    "extension-module",
+    "experimental-declarative-modules",
+] }
 numpy = "0.21.0"
 nalgebra = "0.32.3"
 rayon = "1.7.0"
