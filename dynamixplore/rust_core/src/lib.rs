@@ -1,31 +1,54 @@
-// This is the root of the Rust library crate. It defines the Python module.
+// This is the root of the Rust crate and the main entry point for the PyO3 module.
+// It declares all the sub-modules and registers their public `#[pyclass]` structs
+// with the Python interpreter.
+
+// Declare the modules corresponding to the other files in `src/`.
+mod entropy;
+mod integrators;
+mod lyapunov;
+mod stats;
+
+// Use statements to bring the public classes from each module into scope.
+use entropy::Entropy;
+use integrators::{AdaptiveParams, Euler, ExplicitParams, ImplicitParams, Rk4, Rk45};
+use lyapunov::Lyapunov;
+use stats::Stats;
 
 use pyo3::prelude::*;
 
-// We now declare three modules: integrators, entropy, and stats.
-// Rust will look for `integrators.rs`, `entropy.rs`, and `stats.rs` in the same directory.
-mod integrators;
-mod entropy;
-mod stats;
+/// # DynamiXplore Rust Core (`dx_rust`)
+///
+/// This Python module, written in Rust, provides the high-performance computational
+/// backend for the DynamiXplore library. It exposes a set of classes for performing
+/// common tasks in dynamical systems analysis:
+///
+/// - Solvers (`Rk45`, `Rk4`, `Euler`): Classes for numerically integrating
+///   ordinary differential equations (ODEs).
+/// - Parameter Bundles (`Explicit`, `Implicit`, `Adaptive`): Data classes used to
+///   configure the solvers.
+/// - Analysis Tools (`Lyapunov`, `Entropy`, `Stats`): Classes for calculating
+///   advanced metrics like Lyapunov exponents, entropy measures, and invariant measures.
+///
+/// The library is designed with a Pythonic, object-oriented API to make these powerful
+/// Rust-based computations feel natural and intuitive to Python users.
 
-// This function defines the Python module.
-// The name of the function (`dx_core`) determines the name of the module in Python.
 #[pymodule]
-fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
-    // --- Add Integrator Functions ---
-    m.add_function(wrap_pyfunction!(integrators::solve_rk45_adaptive, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_rk4_explicit, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_rk4_implicit, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_euler_explicit, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_euler_implicit, m)?)?;
+fn dx_rust(_py: Python, m: &PyModule) -> PyResult<()> {
+    // --- Register Solver Classes ---
+    m.add_class::<Rk45>()?;
+    m.add_class::<Rk4>()?;
+    m.add_class::<Euler>()?;
 
-    // --- Add Entropy and Stats Functions ---
-    m.add_function(wrap_pyfunction!(entropy::compute_permutation_entropy, m)?)?;
-    m.add_function(wrap_pyfunction!(entropy::compute_approximate_entropy, m)?)?;
-    m.add_function(wrap_pyfunction!(stats::compute_invariant_measure, m)?)?;
+    // --- Register Parameter Data Classes ---
+    // These are named to match the Python convention (e.g., `dx_rust.Explicit`).
+    m.add_class::<ExplicitParams>()?;
+    m.add_class::<ImplicitParams>()?;
+    m.add_class::<AdaptiveParams>()?;
 
-    // --- Add Lyapunov Spectrum Function ---
-    m.add_function(wrap_pyfunction!(lyapunov::compute_lyapunov_spectrum, m)?)?;
-    
+    // --- Register Analysis Tool Classes ---
+    m.add_class::<Lyapunov>()?;
+    m.add_class::<Entropy>()?;
+    m.add_class::<Stats>()?;
+
     Ok(())
 }
