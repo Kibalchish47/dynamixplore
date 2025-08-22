@@ -1,15 +1,16 @@
-use nalgebra::{DMatrix, DVector, Normed};
-use numpy::{ndarray::Dim, Bound, PyArray, PyReadonlyArray1, ToPyArray};
+// This module houses the numerical ODE solvers, refactored into a class-based, generic architecture.
+
+use nalgebra::{DMatrix, DVector};
+use numpy::{ndarray::Dim, PyArray, PyArrayMethods, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyNotImplementedError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+//use pyo3::Bound;
 
 // --- 1. Core Traits for Generic Solver Design ---
 
 /// A generic trait representing the integration "approach" (e.g., explicit, adaptive).
 /// It defines the high-level integration loop and the expected return type of a single step.
-/// The `'py` lifetime ensures that any Python objects held within implementors of this
-/// trait (like `PyObject` or `PyReadonlyArray1`) do not outlive the Python GIL session.
 pub trait Approach<'py>: Sized {
     type Ret;
     fn integration_loop<S>(self, py: Python<'py>, stepper: S) -> PyResult<PyObject>
@@ -17,6 +18,7 @@ pub trait Approach<'py>: Sized {
         S: Stepper<'py, Self>;
 }
 
+/// A generic trait for a "stepper" (the specific integration algorithm, e.g., RK4).
 pub trait Stepper<'py, A: Approach<'py>> {
     fn step<F>(&self, t: f64, y: &DVector<f64>, h: f64, f: &mut F) -> PyResult<A::Ret>
     where
@@ -24,7 +26,7 @@ pub trait Stepper<'py, A: Approach<'py>> {
 }
 
 // --- 2. Approach Structs (Internal Logic) ---
-// Also made public for use in other modules.
+// These structs hold the parameters for a given integration run.
 pub struct Explicit<'py> {
     pub dynamics: PyObject,
     pub initial_state: PyReadonlyArray1<'py, f64>,
@@ -68,10 +70,11 @@ impl<'py> Approach<'py> for Explicit<'py> {
         trajectory.push(current_y.clone());
 
         let mut call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
-            let y_py = y_eval.to_pyarray_bound(py);
+            let y_py = y_eval.as_slice().to_pyarray_bound(py);
             let args = PyTuple::new_bound(py, &[t_eval.into_py(py), y_py.into_py(py)]);
             let result = self.dynamics.call_bound(py, args, None)?;
-            let py_array: Bound<PyArray<f64, Dim<[usize; 1]>>> = result.extract_bound(py)?;
+            let bound_result = result.bind(py);
+            let py_array: &PyArray<f64, Dim<[usize; 1]>> = bound_result.extract()?;
             let readonly_array = py_array.readonly();
             Ok(DVector::from_column_slice(readonly_array.as_slice()?))
         };
@@ -91,7 +94,7 @@ impl<'py> Approach<'py> for Explicit<'py> {
         };
         let flat_trajectory: Vec<f64> = trajectory
             .into_iter()
-            .flat_map(|v| v.into_iter().cloned())
+            .flat_map(|v| v.iter().cloned().collect::<Vec<f64>>())
             .collect();
         let result_array =
             PyArray::from_vec_bound(py, flat_trajectory).reshape((num_points, state_dim))?;
@@ -115,10 +118,11 @@ impl<'py> Approach<'py> for Adaptive<'py> {
         trajectory.push(current_y.clone());
 
         let mut call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
-            let y_py = y_eval.to_pyarray_bound(py);
+            let y_py = y_eval.as_slice().to_pyarray_bound(py);
             let args = PyTuple::new_bound(py, &[t_eval.into_py(py), y_py.into_py(py)]);
             let result = self.dynamics.call_bound(py, args, None)?;
-            let py_array: Bound<PyArray<f64, Dim<[usize; 1]>>> = result.extract_bound(py)?;
+            let bound_result = result.bind(py);
+            let py_array: &PyArray<f64, Dim<[usize; 1]>> = bound_result.extract()?;
             let readonly_array = py_array.readonly();
             Ok(DVector::from_column_slice(readonly_array.as_slice()?))
         };
@@ -154,7 +158,7 @@ impl<'py> Approach<'py> for Adaptive<'py> {
             }
 
             let factor = if error > 0.0 {
-                let mut factor = SAFETY * (1.0 / error).powf(0.2);
+                let factor = SAFETY * (1.0 / error).powf(0.2);
                 factor.max(MIN_FACTOR).min(MAX_FACTOR)
             } else {
                 MAX_FACTOR
@@ -170,7 +174,7 @@ impl<'py> Approach<'py> for Adaptive<'py> {
         };
         let flat_trajectory: Vec<f64> = trajectory
             .into_iter()
-            .flat_map(|v| v.into_iter().cloned())
+            .flat_map(|v| v.iter().cloned().collect::<Vec<f64>>())
             .collect();
         let traj_array =
             PyArray::from_vec_bound(py, flat_trajectory).reshape((num_points, state_dim))?;
@@ -196,10 +200,11 @@ impl<'py> Approach<'py> for Implicit<'py> {
         trajectory.push(current_y.clone());
 
         let mut call_dynamics = |t_eval: f64, y_eval: &DVector<f64>| -> PyResult<DVector<f64>> {
-            let y_py = y_eval.to_pyarray_bound(py);
+            let y_py = y_eval.as_slice().to_pyarray_bound(py);
             let args = PyTuple::new_bound(py, &[t_eval.into_py(py), y_py.into_py(py)]);
             let result = self.dynamics.call_bound(py, args, None)?;
-            let py_array: Bound<PyArray<f64, Dim<[usize; 1]>>> = result.extract_bound(py)?;
+            let bound_result = result.bind(py);
+            let py_array: &PyArray<f64, Dim<[usize; 1]>> = bound_result.extract()?;
             let readonly_array = py_array.readonly();
             Ok(DVector::from_column_slice(readonly_array.as_slice()?))
         };
@@ -219,7 +224,7 @@ impl<'py> Approach<'py> for Implicit<'py> {
         };
         let flat_trajectory: Vec<f64> = trajectory
             .into_iter()
-            .flat_map(|v| v.into_iter().cloned())
+            .flat_map(|v| v.iter().cloned().collect::<Vec<f64>>())
             .collect();
         let result_array =
             PyArray::from_vec_bound(py, flat_trajectory).reshape((num_points, state_dim))?;
@@ -228,6 +233,7 @@ impl<'py> Approach<'py> for Implicit<'py> {
 }
 
 // --- 4. Stepper Implementations (Internal Logic) ---
+#[pyclass]
 #[derive(Copy, Clone)]
 pub struct Rk45;
 
@@ -242,6 +248,7 @@ impl<'py> Stepper<'py, Adaptive<'py>> for Rk45 {
     where
         F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>>,
     {
+        // Dormand-Prince Coefficients
         const C2: f64 = 1.0 / 5.0;
         const C3: f64 = 3.0 / 10.0;
         const C4: f64 = 4.0 / 5.0;
@@ -312,6 +319,7 @@ impl<'py> Stepper<'py, Adaptive<'py>> for Rk45 {
     }
 }
 
+#[pyclass]
 #[derive(Copy, Clone)]
 pub struct Rk4;
 
@@ -350,6 +358,7 @@ impl<'py> Stepper<'py, Implicit<'py>> for Rk4 {
     }
 }
 
+#[pyclass]
 #[derive(Copy, Clone)]
 pub struct Euler;
 
@@ -380,12 +389,10 @@ impl<'py> Stepper<'py, Implicit<'py>> for Euler {
         F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>>,
     {
         let t_next = t + h;
-        let g = |y_next_guess: &DVector<f64>| -> PyResult<DVector<f64>> {
-            let f_eval = f(t_next, y_next_guess)?;
-            Ok(y_next_guess - y - h * f_eval)
-        };
+        // FIX: Calculate initial_guess BEFORE defining the closure `g` to avoid borrow checker conflict.
         let initial_guess = y + h * f(t, y)?;
-        newton_raphson_solve(g, initial_guess, t_next, h, f)
+        // FIX: The call to newton_raphson_solve is now correct.
+        newton_raphson_solve(y, initial_guess, t_next, h, f)
     }
 }
 
@@ -411,15 +418,18 @@ where
     Ok(jacobian)
 }
 
-fn newton_raphson_solve<G, F>(
-    mut g: G,
+// FIX: Refactored the function signature and body to resolve the borrow-checker error.
+// It no longer takes `g` as an argument. Instead, it takes the previous state `y`
+// and constructs the closure `g` internally. This prevents `f` from being borrowed
+// mutably by the closure and the function call simultaneously.
+fn newton_raphson_solve<F>(
+    y: &DVector<f64>,
     initial_guess: DVector<f64>,
     t_next: f64,
     h: f64,
     f: &mut F,
 ) -> PyResult<DVector<f64>>
 where
-    G: FnMut(&DVector<f64>) -> PyResult<DVector<f64>>,
     F: FnMut(f64, &DVector<f64>) -> PyResult<DVector<f64>>,
 {
     let mut x = initial_guess;
@@ -428,15 +438,24 @@ where
     let max_iter = 20;
     let tolerance = 1e-8;
     let jacobian_eps = 1e-6;
+
     for _ in 0..max_iter {
-        let g_eval = g(&x)?;
+        // Define the function g(y_next) = y_next - y_prev - h * f(t_next, y_next)
+        // whose root we want to find.
+        let g_eval = {
+            let f_eval = f(t_next, &x)?;
+            &x - y - h * f_eval
+        };
+
         if g_eval.norm() < tolerance {
             return Ok(x);
         }
+
         let jacobian_f = approximate_jacobian(t_next, &x, f, jacobian_eps)?;
         let jacobian_g = &identity - h * jacobian_f;
+
         if let Some(inv_jacobian_g) = jacobian_g.try_inverse() {
-            x += inv_jacobian_g * -g_eval;
+            x -= inv_jacobian_g * g_eval; // Corrected update step
         } else {
             return Err(PyValueError::new_err(
                 "Failed to solve linear system in Newton's method (matrix is singular).",
@@ -569,7 +588,7 @@ impl Rk45 {
                 abstol: params.abstol,
                 reltol: params.reltol,
             }
-            .integration_loop(py, Rk45)
+            .integration_loop(py, *self)
         } else {
             Err(PyTypeError::new_err(
                 "RK45 solver requires an 'Adaptive' mode.",
@@ -595,7 +614,7 @@ impl Rk4 {
                 t_end: params.t_end,
                 h: params.h,
             }
-            .integration_loop(py, Rk4)
+            .integration_loop(py, *self)
         } else if let Ok(params) = mode.extract::<ImplicitParams>(py) {
             let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
             Implicit {
@@ -605,7 +624,7 @@ impl Rk4 {
                 t_end: params.t_end,
                 h: params.h,
             }
-            .integration_loop(py, Rk4)
+            .integration_loop(py, *self)
         } else {
             Err(PyTypeError::new_err(
                 "RK4 solver requires an 'Explicit' or 'Implicit' mode.",
@@ -631,7 +650,7 @@ impl Euler {
                 t_end: params.t_end,
                 h: params.h,
             }
-            .integration_loop(py, Euler)
+            .integration_loop(py, *self)
         } else if let Ok(params) = mode.extract::<ImplicitParams>(py) {
             let initial_state = params.initial_state.extract::<PyReadonlyArray1<f64>>(py)?;
             Implicit {
@@ -641,7 +660,7 @@ impl Euler {
                 t_end: params.t_end,
                 h: params.h,
             }
-            .integration_loop(py, Euler)
+            .integration_loop(py, *self)
         } else {
             Err(PyTypeError::new_err(
                 "Euler solver requires an 'Explicit' or 'Implicit' mode.",

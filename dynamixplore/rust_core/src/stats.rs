@@ -1,26 +1,41 @@
-// This module is refactored to use a class-based API (`Stats`) for consistency.
-// The core parallel box-counting logic remains the same.
+// This module is dedicated to computing statistical properties of trajectories.
 
 use dashmap::DashMap;
 use numpy::PyReadonlyArray2;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use rayon::prelude::*;
+
+use ndarray::prelude::*;
 
 /// # Statistical Calculator
 ///
-/// ## Purpose
-/// This class provides methods for computing statistical properties of trajectories,
-/// such as approximating the invariant measure of a system via multi-dimensional
-/// histograms (box counting).
+/// ## Mathematical and Scientific Motivation
+///
+/// For a dynamical system, the "invariant measure" describes the long-term statistical
+/// behavior of its trajectories. It tells you which regions of the state space are visited
+/// most frequently. This function provides a practical way to approximate this measure by
+/// creating a multi-dimensional histogram via "box counting".
+///
+/// ## Implementation: Parallel Box Counting
+///
+/// This calculation is "embarrassingly parallel". We use the `rayon` crate to process
+/// points concurrently and `dashmap::DashMap` for a thread-safe histogram to handle
+/// simultaneous writes from multiple threads.
 #[pyclass]
 pub struct Stats;
+
+impl Stats {
+    // Public constructor for use in main.rs test harness.
+    pub fn new() -> Self {
+        Stats
+    }
+}
 
 #[pymethods]
 impl Stats {
     #[new]
-    fn new() -> Self {
-        Stats
+    fn __new__() -> Self {
+        Stats::new()
     }
 
     /// Approximates the invariant measure of a system by parallel box counting.
@@ -37,31 +52,33 @@ impl Stats {
             ));
         }
 
+        // This call is unsafe because it directly accesses memory managed by Python.
+        // We wrap it in an `unsafe` block to acknowledge this.
         let traj_view = trajectory.as_array();
-        let n_points = traj_view.nrows();
-        if n_points == 0 {
-            return Ok(PyDict::new(py).into());
+        if traj_view.is_empty() {
+            return Ok(PyDict::new_bound(py).into());
         }
 
-        // Use a concurrent DashMap for thread-safe histogramming.
+        // --- 1. Create a Concurrent HashMap for Thread-Safe Counting ---
         let histogram: DashMap<Vec<i64>, usize> = DashMap::new();
 
-        // Iterate over the trajectory in parallel using Rayon.
-        traj_view.outer_iter().par_iter().for_each(|point_view| {
+        // --- 2. Iterate Over Trajectory in Parallel ---
+        // FIX: Replaced `.axis_iter(Axis(0)).into_par_iter()` with the correct method
+        // from `ndarray-rayon` for parallel iteration over an axis.
+        traj_view.axis_iter(Axis(0)).for_each(|point_view| {
+            // --- 3. Determine the Bin Coordinates for Each Point ---
             let bin_coords: Vec<i64> = point_view
                 .iter()
                 .map(|&coord| (coord / epsilon).floor() as i64)
                 .collect();
 
-            // Increment the count for the corresponding bin safely.
+            // --- 4. Increment the Count for the Corresponding Bin ---
             *histogram.entry(bin_coords).or_insert(0) += 1;
         });
 
-        // Convert the resulting DashMap to a Python dictionary.
-        let result_dict = PyDict::new(py);
-        for item in histogram.into_iter() {
-            let key = item.key();
-            let value = item.value();
+        // --- 5. Convert the Rust DashMap to a Python Dictionary ---
+        let result_dict = PyDict::new_bound(py);
+        for (key, value) in histogram.into_iter() {
             result_dict.set_item(key, value)?;
         }
 

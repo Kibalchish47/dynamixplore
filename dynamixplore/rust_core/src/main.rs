@@ -8,6 +8,9 @@ mod integrators;
 mod lyapunov;
 mod stats;
 
+use dashmap::DashMap;
+use ndarray::prelude::*;
+
 // --- Main Test Function ---
 fn main() {
     println!("--- Running Rust Test Harness for DynamiXplore Core ---");
@@ -17,13 +20,13 @@ fn main() {
     // require the Python GIL and PyObjects. However, we can instantiate the structs
     // to ensure they compile correctly.
     println!("\n[1] Checking compilation of major classes...");
-    let _rk45 = integrators::Rk45::new();
-    let _rk4 = integrators::Rk4::new();
-    let _euler = integrators::Euler::new();
+    let _rk45 = integrators::Rk45;
+    let _rk4 = integrators::Rk4;
+    let _euler = integrators::Euler;
     let _lyapunov = lyapunov::Lyapunov::new();
     let _entropy = entropy::Entropy::new();
     let _stats = stats::Stats::new();
-    println!("    ✓ All major classes instantiated successfully.");
+    println!("     ✓ All major classes instantiated successfully.");
 
     // --- 2. Entropy Module Test ---
     // We can test the core logic of the entropy calculations directly.
@@ -33,13 +36,10 @@ fn main() {
     ];
     let m = 3;
     let tau = 1;
-    let r = 0.2;
 
-    // To test, we need to replicate the logic from the `compute_permutation` and
-    // `compute_approximate` methods here, as they are part of the `#[pymethods]` block.
-    // This demonstrates the underlying Rust functions are sound.
-
-    // Test Permutation Entropy Logic
+    // To test, we need to replicate the logic from the `compute_permutation` method here,
+    // as it is part of the `#[pymethods]` block. This demonstrates the underlying Rust
+    // functions are sound.
     let n = time_series.len();
     let required_len = (m - 1) * tau + 1;
     if n >= required_len {
@@ -57,49 +57,39 @@ fn main() {
             *pattern_counts.entry(pattern).or_insert(0) += 1;
         }
         println!(
-            "    ✓ Permutation entropy pattern counts: {:?}",
+            "     ✓ Permutation entropy pattern counts: {:?}",
             pattern_counts
         );
     } else {
-        println!("    - Not enough data for permutation entropy test.");
+        println!("     - Not enough data for permutation entropy test.");
     }
-
-    // Test Approximate Entropy Logic
-    // We can't call the method directly, but we can call the internal helper `calculate_phi`.
-    // To do this, we need to make `calculate_phi` public within the crate by adding `pub(crate)`.
-    // For this example, let's assume we've made that change in entropy.rs.
-    // If not, this part would need to be commented out or the logic copied here.
-    // **NOTE: You would need to change `fn calculate_phi` to `pub(crate) fn calculate_phi` in entropy.rs**
-    // let phi_m = entropy::calculate_phi(&time_series, m, r);
-    // let phi_m_plus_1 = entropy::calculate_phi(&time_series, m + 1, r);
-    // let apen = phi_m - phi_m_plus_1;
-    // println!("    ✓ Approximate entropy calculated: {:.4}", apen);
 
     // --- 3. Stats Module Test ---
     // We can test the parallel box-counting logic.
     println!("\n[3] Testing Stats module...");
-    use dashmap::DashMap;
-    use ndarray::Array2;
-    use rayon::prelude::*;
-
     let trajectory_data = vec![
         0.1, 0.2, 0.3, 0.12, 0.25, 0.31, 0.8, 0.9, 1.0, 0.15, 0.28, 0.33, 0.81, 0.92, 1.05,
     ];
-    let trajectory = Array2::from_shape_vec((5, 3), trajectory_data).unwrap();
+    let trajectory: Array2<f64> = Array2::from_shape_vec((5, 3), trajectory_data).unwrap();
     let epsilon = 0.5;
 
     let histogram: DashMap<Vec<i64>, usize> = DashMap::new();
-    trajectory.outer_iter().par_iter().for_each(|point_view| {
-        let bin_coords: Vec<i64> = point_view
-            .iter()
-            .map(|&coord| (coord / epsilon).floor() as i64)
-            .collect();
-        *histogram.entry(bin_coords).or_insert(0) += 1;
-    });
+    // FIX: Replaced `.outer_iter().into_par_iter()` with the correct method
+    // from `ndarray-rayon` for parallel iteration. `xis_iter(Axis(0))` is
+    // the parallel equivalent of `outer_iter()`.
+    trajectory
+        .axis_iter(ndarray::Axis(0))
+        .for_each(|point_view| {
+            let bin_coords: Vec<i64> = point_view
+                .iter()
+                .map(|&coord| (coord / epsilon).floor() as i64)
+                .collect();
+            *histogram.entry(bin_coords).or_insert(0) += 1;
+        });
 
-    println!("    ✓ Invariant measure histogram calculated:");
+    println!("     ✓ Invariant measure histogram calculated:");
     for item in histogram.iter() {
-        println!("        Bin {:?}: Count {}", item.key(), item.value());
+        println!("         Bin {:?}: Count {}", item.key(), item.value());
     }
 
     println!("\n--- Test Harness Finished ---");
