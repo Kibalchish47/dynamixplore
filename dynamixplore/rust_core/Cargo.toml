@@ -1,10 +1,12 @@
 [package]
-name = "dynamixplore_core" # Or whatever your package name is
+name = "dynamixplore-rust-core" # A more descriptive name for the crate
 version = "0.5.0"
 edition = "2021"
 
 [lib]
-name = "dx_rust"        # The name of the python module
+# FIX: This is the critical change. The compiled library will now be `_core.so`.
+# This avoids any name collision with the parent package.
+name = "_core"
 crate-type = ["cdylib"]
 
 [[bin]]

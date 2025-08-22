@@ -16,31 +16,20 @@ use stats::Stats;
 
 use pyo3::prelude::*;
 
-/// # DynamiXplore Rust Core (`dx_rust`)
+/// # DynamiXplore Rust Core (`_core`)
 ///
 /// This Python module, written in Rust, provides the high-performance computational
-/// backend for the DynamiXplore library. It exposes a set of classes for performing
-/// common tasks in dynamical systems analysis:
-///
-/// - Solvers (`Rk45`, `Rk4`, `Euler`): Classes for numerically integrating
-///   ordinary differential equations (ODEs).
-/// - Parameter Bundles (`Explicit`, `Implicit`, `Adaptive`): Data classes used to
-///   configure the solvers.
-/// - Analysis Tools (`Lyapunov`, `Entropy`, `Stats`): Classes for calculating
-///   advanced metrics like Lyapunov exponents, entropy measures, and invariant measures.
-///
-/// The library is designed with a Pythonic, object-oriented API to make these powerful
-/// Rust-based computations feel natural and intuitive to Python users.
-
+/// backend for the DynamiXplore library.
 #[pymodule]
-fn dx_rust(_py: Python, m: &PyModule) -> PyResult<()> {
+// FIX: The name inside the pymodule macro MUST match the `[lib]` name in Cargo.toml.
+// This creates the `PyInit__core` function that Python looks for.
+fn _core(_py: Python, m: &PyModule) -> PyResult<()> {
     // --- Register Solver Classes ---
     m.add_class::<Rk45>()?;
     m.add_class::<Rk4>()?;
     m.add_class::<Euler>()?;
 
     // --- Register Parameter Data Classes ---
-    // These are named to match the Python convention (e.g., `dx_rust.Explicit`).
     m.add_class::<ExplicitParams>()?;
     m.add_class::<ImplicitParams>()?;
     m.add_class::<AdaptiveParams>()?;
