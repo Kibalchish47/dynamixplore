@@ -1,5 +1,3 @@
-# src/dynamixplore/__init__.py
-
 """
 DynamiXplore: A high-performance toolkit for the simulation and analysis
 of complex dynamical systems.
