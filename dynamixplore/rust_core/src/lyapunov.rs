@@ -1,4 +1,3 @@
-// In src/lyapunov.rs
 // This module is refactored to use a class-based API (`Lyapunov`) for consistency
 // with the new architectural pattern.
 
@@ -150,8 +149,7 @@ impl Lyapunov {
             .into_iter()
             .flat_map(|v| v.into_iter().cloned())
             .collect();
-        let history_array =
-            PyArray::from_vec(py, history_flat).reshape((num_steps, state_dim))?;
+        let history_array = PyArray::from_vec(py, history_flat).reshape((num_steps, state_dim))?;
 
         Ok(PyTuple::new(py, &[final_spectrum_py, history_array]).to_object(py))
     }
