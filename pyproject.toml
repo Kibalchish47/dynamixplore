@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "dynamixplore"
-version = "0.5.0"
+version = "0.6.0"
 requires-python = ">=3.8"
 
 # This is the crucial part. It tells maturin how to structure the project.
