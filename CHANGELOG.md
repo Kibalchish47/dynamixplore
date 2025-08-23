@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.6.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.5.0...dynamixplore-v0.6.0) (2025-08-23)
+
+
+### Features
+
+* 5 dynamical systems for benchmarking ([61e6024](https://github.com/Kibalchish47/dynamixplore/commit/61e60244c1993fd460a92bfd5278437b29b45f1c))
+* fully implemented and generated benchmarks ([30901e8](https://github.com/Kibalchish47/dynamixplore/commit/30901e87737ab12ddc1dbcf0191b292c0034037f))
+* helper functions in `integrators.rs` ([5b93e68](https://github.com/Kibalchish47/dynamixplore/commit/5b93e68cf3d92a7760ce610caca3aaae3826c6bd))
+* implemented various integrator steppers ([e79a56e](https://github.com/Kibalchish47/dynamixplore/commit/e79a56ef443042d6778716ad1f661e813c2dfcc6))
+* modified  (new architecture) ([d26d903](https://github.com/Kibalchish47/dynamixplore/commit/d26d9036eb28e18ef424f8139aeba9dc93b48466))
+* PyO3 Class Definitions for Python API ([aa9389c](https://github.com/Kibalchish47/dynamixplore/commit/aa9389cee1bcad9245d94a3eb072e581cec49551))
+* re-implemented  module ([90b3c96](https://github.com/Kibalchish47/dynamixplore/commit/90b3c9614d8918f76f3147315b32463f48f3da40))
+* re-implemented  module ([28d91d9](https://github.com/Kibalchish47/dynamixplore/commit/28d91d9a3141d238879c91d92918868f82aa4ced))
+* re-implemented `lyapunov.rs` module ([100fd3a](https://github.com/Kibalchish47/dynamixplore/commit/100fd3a4c5dcbfbc206a2547a18fadddf15f4603))
+* re-implemented adaptive integration loop ([cdb0abd](https://github.com/Kibalchish47/dynamixplore/commit/cdb0abdc0d202b29c65f05e145471997fd559207))
+* re-implemented explicit integration loop ([d70ef1d](https://github.com/Kibalchish47/dynamixplore/commit/d70ef1d68b629a2bbbd960232518f68f4b64d127))
+* re-implemented implicit integration loop ([86498d4](https://github.com/Kibalchish47/dynamixplore/commit/86498d4a38d27bbf9f01cb044d04dbd82a6b0add))
+* reworked program architecture ([1596aea](https://github.com/Kibalchish47/dynamixplore/commit/1596aea56448475474f80406168f69f035cd10c8))
+
+
+### Bug Fixes
+
+* `invariant_measure()` performance fix + new benchmark ([13e9ca9](https://github.com/Kibalchish47/dynamixplore/commit/13e9ca96afa0e4f281acda1284abc1da160c2efa))
+* attempted to fix  issue ([8c327a5](https://github.com/Kibalchish47/dynamixplore/commit/8c327a51d4a3c5afd5efb92c60f10698540f4bb0))
+* Deadlock caused by using GIL for calling`dynamics_func` ([2d5659e](https://github.com/Kibalchish47/dynamixplore/commit/2d5659e1f5e471ef5704ec2e4c29c8a61a65747e))
+* dealing with  compilation errors ([ad17179](https://github.com/Kibalchish47/dynamixplore/commit/ad17179a1dfe3950cc5ec79c466787c27c9480ca))
+* fixed Rust modules' compilation errors ([c74c6aa](https://github.com/Kibalchish47/dynamixplore/commit/c74c6aaa792a791c42eedf1caa10c3244d11af52))
+* modified Python layer to fit with Rust ([294be8d](https://github.com/Kibalchish47/dynamixplore/commit/294be8d0f5358ace1b65fb5eaff9b77cc6853af5))
+* re-implemented ([2a84731](https://github.com/Kibalchish47/dynamixplore/commit/2a847312c7e04a0d1f354aa7729a2ca9437aaf7f))
+* re-implemented ([e892ee7](https://github.com/Kibalchish47/dynamixplore/commit/e892ee7168ad7f228af3eab67b363b1cb3efe857))
+* re-implemented tests to align with new code ([05b066d](https://github.com/Kibalchish47/dynamixplore/commit/05b066d2af2be32b41279c93240016b7629548ba))
+
+
+### Documentation
+
+* implemented analysis benchmarks ([dcb32a9](https://github.com/Kibalchish47/dynamixplore/commit/dcb32a93f4eb63ac95019c9d8538831c157c06ba))
+* implemented simulation benchmarks ([076b96e](https://github.com/Kibalchish47/dynamixplore/commit/076b96e0c23a4d9ecc2a745ea63d80f2758c1b9d))
+
 ## [0.5.0](https://github.com/Kibalchish47/dynamixplore/compare/dynamixplore-v0.4.0...dynamixplore-v0.5.0) (2025-08-13)
 
 

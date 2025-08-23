@@ -25,4 +25,4 @@ from .visualize import plot_phase_portrait, plot_invariant_measure
 __all__ = ["_core", "Simulation", "Analysis", "plot_phase_portrait", "plot_invariant_measure"]
 
 # Define __version__ for easy access by users and packaging tools.
-__version__ = "0.5.0"
+__version__ = "0.6.0"
