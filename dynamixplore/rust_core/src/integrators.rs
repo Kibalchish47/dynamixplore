@@ -108,7 +108,6 @@ impl<'py> Approach<'py> for Adaptive<'py> {
     where
         S: Stepper<'py, Self>,
         {
-        println!("#0");
         let mut current_y = DVector::from_column_slice(self.initial_state.as_slice()?);
         let mut current_t = self.t_start;
         let mut current_h = self.initial_h;
@@ -132,9 +131,7 @@ impl<'py> Approach<'py> for Adaptive<'py> {
         const MIN_FACTOR: f64 = 0.2;
         const MAX_FACTOR: f64 = 10.0;
 
-        println!("#1");
         while current_t < self.t_end {
-            println!("#2a - Loop");
             if current_t + current_h > self.t_end {
                 current_h = self.t_end - current_t;
             }
@@ -168,8 +165,6 @@ impl<'py> Approach<'py> for Adaptive<'py> {
             };
             current_h *= factor;
         }
-
-        println!("#3");
         
         let num_points = trajectory.len();
         let state_dim = if num_points > 0 {
@@ -186,9 +181,8 @@ impl<'py> Approach<'py> for Adaptive<'py> {
         let time_array = PyArray::from_vec_bound(py, times);
         let result_tuple =
         PyTuple::new_bound(py, &[traj_array.to_object(py), time_array.to_object(py)]);
-        println!("#4");
+
         let a = Ok(result_tuple.to_object(py));
-        println!("Return");
         a
     }
 }

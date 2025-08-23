@@ -3,7 +3,7 @@
 use dashmap::DashMap;
 use numpy::PyReadonlyArray2;
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyTuple};
 
 use ndarray::prelude::*;
 
@@ -78,8 +78,13 @@ impl Stats {
 
         // --- 5. Convert the Rust DashMap to a Python Dictionary ---
         let result_dict = PyDict::new_bound(py);
-        for (key, value) in histogram.into_iter() {
-            result_dict.set_item(key, value)?;
+        for item in histogram.into_iter() {
+            let key_vec = item.0;   // This is the Vec<i64>
+            let value = item.1; // This is the usize count
+
+            // FIX: Explicitly convert the Rust Vec into a Python tuple, which is hashable.
+            let key_tuple = PyTuple::new_bound(py, &key_vec);
+            result_dict.set_item(key_tuple, value)?;
         }
 
         Ok(result_dict.into())

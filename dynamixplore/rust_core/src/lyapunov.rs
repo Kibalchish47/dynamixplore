@@ -3,7 +3,6 @@ use nalgebra::{DMatrix, DVector};
 use numpy::{ndarray::Dim, PyArray, PyArrayMethods, PyReadonlyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 /// # Lyapunov Spectrum Calculator
 ///
@@ -73,9 +72,7 @@ impl Lyapunov {
         let num_steps = (t_total / t_reorth).ceil() as usize;
         let mut spectrum_history: Vec<DVector<f64>> = Vec::with_capacity(num_steps);
 
-        println!("For loop!");
-        for s in 0..num_steps {
-            println!("Step {s}");
+        for _ in 0..num_steps {
             let mut initial_states: Vec<DVector<f64>> = Vec::with_capacity(state_dim + 1);
             initial_states.push(main_y.clone());
             for j in 0..state_dim {
