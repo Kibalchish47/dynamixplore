@@ -1,0 +1,128 @@
+--- DynamiXplore Performance Benchmark Results ---
+Generated on: 2025-08-23 12:05:19
+==================================================
+
+Benchmark Group: Invariant Measure
+-----------------------------------
+DynamiXplore                : 0.043466s
+SciPy                       : 0.001358s
+  -> Speedup (SciPy/DX): 0.03x (Note: SciPy is faster due to single-call optimization vs. high-overhead Rust calls)
+
+Benchmark Group: Lorenz-200.0s-30D
+-----------------------------------
+DX_RK45_Adaptive            : 1.231940s
+DX_RK4_Fixed                : 5.683520s
+SciPy_RK45_Adaptive         : 2.927297s
+SciPy_RK45_FixedLike        : 5.689906s
+  -> Adaptive Speedup (SciPy/DX): 2.38x
+  -> Fixed-Step Speedup (SciPy/DX): 1.00x
+
+Benchmark Group: Lorenz-200.0s-3D
+----------------------------------
+DX_RK45_Adaptive            : 0.230790s
+DX_RK4_Fixed                : 0.851116s
+SciPy_RK45_Adaptive         : 0.755946s
+SciPy_RK45_FixedLike        : 1.815607s
+  -> Adaptive Speedup (SciPy/DX): 3.28x
+  -> Fixed-Step Speedup (SciPy/DX): 2.13x
+
+Benchmark Group: Lorenz-50.0s-30D
+----------------------------------
+DX_RK45_Adaptive            : 0.299646s
+DX_RK4_Fixed                : 0.859479s
+SciPy_RK45_Adaptive         : 0.727613s
+SciPy_RK45_FixedLike        : 1.454031s
+  -> Adaptive Speedup (SciPy/DX): 2.43x
+  -> Fixed-Step Speedup (SciPy/DX): 1.69x
+
+Benchmark Group: Lorenz-50.0s-3D
+---------------------------------
+DX_RK45_Adaptive            : 0.056527s
+DX_RK4_Fixed                : 0.192504s
+SciPy_RK45_Adaptive         : 0.163946s
+SciPy_RK45_FixedLike        : 0.394579s
+  -> Adaptive Speedup (SciPy/DX): 2.90x
+  -> Fixed-Step Speedup (SciPy/DX): 2.05x
+
+Benchmark Group: Lyapunov Spectrum
+-----------------------------------
+DynamiXplore                : 4.102792s
+nolds                       : 54.206257s
+  -> Speedup (nolds/DX): 13.21x
+
+Benchmark Group: Permutation Entropy
+-------------------------------------
+DynamiXplore                : 0.027590s
+
+Benchmark Group: Rössler-200.0s-30D
+------------------------------------
+DX_RK45_Adaptive            : 0.296235s
+DX_RK4_Fixed                : 3.596520s
+SciPy_RK45_Adaptive         : 0.524957s
+SciPy_RK45_FixedLike        : 5.147117s
+  -> Adaptive Speedup (SciPy/DX): 1.77x
+  -> Fixed-Step Speedup (SciPy/DX): 1.43x
+
+Benchmark Group: Rössler-200.0s-3D
+-----------------------------------
+DX_RK45_Adaptive            : 0.060268s
+DX_RK4_Fixed                : 0.846233s
+SciPy_RK45_Adaptive         : 0.113670s
+SciPy_RK45_FixedLike        : 1.801497s
+  -> Adaptive Speedup (SciPy/DX): 1.89x
+  -> Fixed-Step Speedup (SciPy/DX): 2.13x
+
+Benchmark Group: Rössler-50.0s-30D
+-----------------------------------
+DX_RK45_Adaptive            : 0.067692s
+DX_RK4_Fixed                : 0.960709s
+SciPy_RK45_Adaptive         : 0.088366s
+SciPy_RK45_FixedLike        : 1.418725s
+  -> Adaptive Speedup (SciPy/DX): 1.31x
+  -> Fixed-Step Speedup (SciPy/DX): 1.48x
+
+Benchmark Group: Rössler-50.0s-3D
+----------------------------------
+DX_RK45_Adaptive            : 0.011396s
+DX_RK4_Fixed                : 0.207794s
+SciPy_RK45_Adaptive         : 0.021983s
+SciPy_RK45_FixedLike        : 0.376965s
+  -> Adaptive Speedup (SciPy/DX): 1.93x
+  -> Fixed-Step Speedup (SciPy/DX): 1.81x
+
+Benchmark Group: SHO-200.0s-20D
+--------------------------------
+DX_RK45_Adaptive            : 0.078705s
+DX_RK4_Fixed                : 3.449645s
+SciPy_RK45_Adaptive         : 0.193484s
+SciPy_RK45_FixedLike        : 5.308315s
+  -> Adaptive Speedup (SciPy/DX): 2.46x
+  -> Fixed-Step Speedup (SciPy/DX): 1.54x
+
+Benchmark Group: SHO-200.0s-2D
+-------------------------------
+DX_RK45_Adaptive            : 0.019397s
+DX_RK4_Fixed                : 0.762313s
+SciPy_RK45_Adaptive         : 0.053130s
+SciPy_RK45_FixedLike        : 1.356810s
+  -> Adaptive Speedup (SciPy/DX): 2.74x
+  -> Fixed-Step Speedup (SciPy/DX): 1.78x
+
+Benchmark Group: SHO-50.0s-20D
+-------------------------------
+DX_RK45_Adaptive            : 0.020525s
+DX_RK4_Fixed                : 0.855127s
+SciPy_RK45_Adaptive         : 0.047115s
+SciPy_RK45_FixedLike        : 1.223025s
+  -> Adaptive Speedup (SciPy/DX): 2.30x
+  -> Fixed-Step Speedup (SciPy/DX): 1.43x
+
+Benchmark Group: SHO-50.0s-2D
+------------------------------
+DX_RK45_Adaptive            : 0.004311s
+DX_RK4_Fixed                : 0.221896s
+SciPy_RK45_Adaptive         : 0.013517s
+SciPy_RK45_FixedLike        : 0.444885s
+  -> Adaptive Speedup (SciPy/DX): 3.14x
+  -> Fixed-Step Speedup (SciPy/DX): 2.00x
+
