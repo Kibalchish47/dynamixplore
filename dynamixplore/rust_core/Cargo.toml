@@ -1,6 +1,25 @@
 [package]
-name = "rust_core"
-version = "0.1.0"
-edition = "2024"
+name = "dynamixplore-rust-core" # A more descriptive name for the crate
+version = "0.5.0"
+edition = "2021"
+
+[lib]
+# FIX: This is the critical change. The compiled library will now be `_core.so`.
+# This avoids any name collision with the parent package.
+name = "dynamixplore"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "test_harness"
+path = "src/main.rs"
 
 [dependencies]
+pyo3 = { version = "0.21.2", features = [
+    "extension-module",
+    "experimental-declarative-modules",
+] }
+numpy = "0.21.0"
+nalgebra = "0.32.3"
+rayon = "1.7.0"
+dashmap = "5.5.3"
+ndarray = { version = "0.15.6", features = ["rayon"] }

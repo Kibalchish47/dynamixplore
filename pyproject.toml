@@ -1,15 +1,16 @@
 [build-system]
-requires = ["maturin>=1.9,<2.0"]
+requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
 name = "dynamixplore"
+version = "0.5.0"
 requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
-]
-dynamic = ["version"]
+
+# This is the crucial part. It tells maturin how to structure the project.
 [tool.maturin]
-features = ["pyo3/extension-module"]
+# This points to the Rust crate that contains our compiled code.
+manifest-path = "dynamixplore/rust_core/Cargo.toml"
+# This tells maturin that the compiled module, which we will name `_core`,
+# belongs inside the `dynamixplore` Python package directory.
+module-source = { _core = "dynamixplore" }

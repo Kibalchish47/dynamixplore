@@ -1,31 +1,40 @@
-// This is the root of the Rust library crate. It defines the Python module.
+// This is the root of the Rust crate and the main entry point for the PyO3 module.
+// It declares all the sub-modules and registers their public `#[pyclass]` structs
+// with the Python interpreter.
+
+// Declare the modules corresponding to the other files in `src/`.
+pub mod entropy;
+pub mod integrators;
+pub mod lyapunov;
+pub mod stats;
+
+#[cfg(test)]
+mod unit_test;
 
 use pyo3::prelude::*;
 
-// We now declare three modules: integrators, entropy, and stats.
-// Rust will look for `integrators.rs`, `entropy.rs`, and `stats.rs` in the same directory.
-mod integrators;
-mod entropy;
-mod stats;
-
-// This function defines the Python module.
-// The name of the function (`dx_core`) determines the name of the module in Python.
 #[pymodule]
-fn dx_core(_py: Python, m: &PyModule) -> PyResult<()> {
-    // --- Add Integrator Functions ---
-    m.add_function(wrap_pyfunction!(integrators::solve_rk45_adaptive, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_rk4_explicit, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_rk4_implicit, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_euler_explicit, m)?)?;
-    m.add_function(wrap_pyfunction!(integrators::solve_euler_implicit, m)?)?;
+mod dynamixplore {
+    use pyo3::prelude::*;
 
-    // --- Add Entropy and Stats Functions ---
-    m.add_function(wrap_pyfunction!(entropy::compute_permutation_entropy, m)?)?;
-    m.add_function(wrap_pyfunction!(entropy::compute_approximate_entropy, m)?)?;
-    m.add_function(wrap_pyfunction!(stats::compute_invariant_measure, m)?)?;
+    /// # DynamiXplore Rust Core (`_core`)
+    ///
+    /// This Python module, written in Rust, provides the high-performance computational
+    /// backend for the DynamiXplore library.
+    #[pymodule]
+    mod _core {
+        // Use statements to bring the public classes from each module into scope.
+        #[rustfmt::skip]
+        #[pymodule_export]
+        use crate::integrators::{
+            // --- Register Solver Classes ---
+            Euler, Rk4, Rk45,
+            // --- Register Parameter Data Classes ---
+            AdaptiveParams, ExplicitParams, ImplicitParams, 
+        };
 
-    // --- Add Lyapunov Spectrum Function ---
-    m.add_function(wrap_pyfunction!(lyapunov::compute_lyapunov_spectrum, m)?)?;
-    
-    Ok(())
+        // --- Register Analysis Tool Classes ---
+        #[pymodule_export]
+        use crate::{entropy::Entropy, lyapunov::Lyapunov, stats::Stats};
+    }
 }

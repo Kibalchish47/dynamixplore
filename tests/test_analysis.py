@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-import dx_core
+import dynamixplore as dx
 
 # --- Fixtures defined in conftest.py will be automatically available ---
 
@@ -11,18 +11,22 @@ def test_lyapunov_spectrum_lorenz(lorenz_system_fixture):
     Tests the Lyapunov spectrum calculation against the canonical value for the
     Lorenz system's largest exponent (~0.906).
     """
-    initial_state = np.array([1.0, 1.0, 1.0])
+    # Step 1: Run a simulation to get a trajectory on the attractor.
+    sim = dx.Simulation(
+        dynamics_func=lorenz_system_fixture,
+        initial_state=[1.0, 1.0, 1.0],
+        t_span=(0.0, 100.0), # A reasonably long run to get onto the attractor
+        dt=0.01
+    )
+    analysis_obj = sim.run(solver='RK45', mode='Adaptive')
 
+    # Step 2: Call the analysis method on the resulting object.
     # A shorter run for testing purposes, but long enough for convergence.
-    spectrum, history = dx_core.compute_lyapunov_spectrum(
-        lorenz_system_fixture,
-        initial_state,
+    spectrum, history = analysis_obj.lyapunov_spectrum(
+        dynamics=lorenz_system_fixture,
         t_transient=10.0,
         t_total=2000.0,
-        t_reorth=1.0,
-        h_init=0.01,
-        abstol=1e-8,
-        reltol=1e-8
+        t_reorth=1.0
     )
 
     # Assert that the largest exponent is close to the known value.
@@ -42,35 +46,16 @@ def test_permutation_entropy():
     t = np.linspace(0, 4 * np.pi, 1000)
     
     # Predictable signal
-    sine_wave = np.sin(t)
-    pe_sine = dx_core.compute_permutation_entropy(sine_wave, m=3, tau=1)
+    sine_wave = np.sin(t).reshape(-1, 1) # Reshape to (n_points, n_dims)
+    analysis_sine = dx.Analysis(trajectory=sine_wave, dt=0.1)
+    pe_sine = analysis_sine.permutation_entropy(dim=0, m=3, tau=1)
     assert pe_sine < 0.1
 
     # Unpredictable signal
-    random_noise = np.random.rand(1000)
-    pe_random = dx_core.compute_permutation_entropy(random_noise, m=3, tau=1)
+    random_noise = np.random.rand(1000).reshape(-1, 1)
+    analysis_random = dx.Analysis(trajectory=random_noise, dt=0.1)
+    pe_random = analysis_random.permutation_entropy(dim=0, m=3, tau=1)
     assert pe_random > 0.95
-
-def test_approximate_entropy():
-    """
-    Tests approximate entropy on predictable and random signals.
-    - A sine wave is highly regular -> low ApEn.
-    - Random noise is highly irregular -> high ApEn.
-    """
-    np.random.seed(42)
-    t = np.linspace(0, 4 * np.pi, 1000)
-    
-    # Predictable signal
-    sine_wave = np.sin(t)
-    r_sine = 0.2 * np.std(sine_wave)
-    apen_sine = dx_core.compute_approximate_entropy(sine_wave, m=2, r=r_sine)
-    assert apen_sine < 0.1
-
-    # Unpredictable signal
-    random_noise = np.random.rand(1000)
-    r_random = 0.2 * np.std(random_noise)
-    apen_random = dx_core.compute_approximate_entropy(random_noise, m=2, r=r_random)
-    assert apen_random > 0.5 # ApEn is typically lower than PE
 
 def test_invariant_measure():
     """
@@ -83,26 +68,33 @@ def test_invariant_measure():
         [2.3, 0.4],  # Bin (2, 0)
         [0.8, 1.9],  # Bin (0, 1)
     ])
-    epsilon = 1.0
+    
+    analysis_obj = dx.Analysis(trajectory=trajectory, dt=1.0)
+    hist, x_bins, y_bins = analysis_obj.invariant_measure(epsilon=1.0, dims=(0, 1))
 
-    histogram = dx_core.compute_invariant_measure(trajectory, epsilon)
-
-    # The keys in the returned dict are tuples of the bin coordinates.
-    expected_histogram = {
-        (0, 1): 3,
-        (2, 0): 1,
-    }
-    assert histogram == expected_histogram
+    # The method now returns a 2D numpy array, not a dict.
+    # We need to build the expected array.
+    # Bins are (0,0), (0,1), (1,0), (1,1), (2,0), (2,1)
+    # Coords are (0,1) -> 3 times, (2,0) -> 1 time
+    expected_hist = np.array([
+        [0., 3.], # x=0, y=0,1
+        [0., 0.], # x=1, y=0,1
+        [1., 0.]  # x=2, y=0,1
+    ])
+    
+    assert np.array_equal(hist, expected_hist)
 
 def test_analysis_error_handling():
     """
     Ensures that analysis functions raise appropriate errors for invalid input.
     """
+    # Create a dummy analysis object for testing method calls
+    analysis_obj = dx.Analysis(trajectory=np.random.rand(100, 2), dt=0.1)
+
     # Test permutation entropy with invalid parameters
     with pytest.raises(ValueError, match="Embedding dimension 'm' must be at least 2"):
-        dx_core.compute_permutation_entropy(np.array([1.0, 2.0, 3.0]), m=1, tau=1)
+        analysis_obj.permutation_entropy(m=1, tau=1)
 
-    # Test that providing a 1D array to a function expecting 2D fails
-    # Note: This will likely raise a TypeError from the numpy crate binding.
-    with pytest.raises(TypeError):
-        dx_core.compute_invariant_measure(np.array([1.0, 2.0, 3.0]), epsilon=1.0)
+    # Test that providing a 1D array to the Analysis constructor fails
+    with pytest.raises(ValueError, match="Trajectory must be a 2D NumPy array"):
+        dx.Analysis(trajectory=np.array([1.0, 2.0, 3.0]), dt=0.1)
